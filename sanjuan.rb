@@ -8,7 +8,8 @@
 class SanJuan
 
   Title = 'San Juan'
-  Max_Buildings = 7
+  Max_Buildings = 12
+
   B = Bold
   Colors = { silver_smelter: Irc.color(:black, :lightgray),
              indigo_plant: Irc.color(:white, :blue),
@@ -388,6 +389,10 @@ class SanJuan
       card.production?
     end
 
+    def violet?
+      card.violet?
+    end
+
     def to_s
       color = Colors[card.id] || Colors[:violet]
       s = ''
@@ -425,6 +430,11 @@ class SanJuan
       return false
     end
 
+    def violet?
+      return true unless phase == :producer
+      return false
+    end
+
     def to_s
       color = Colors[id] || Colors[:violet]
       i = id.to_s.gsub('_',' ').capitalize
@@ -457,7 +467,7 @@ class SanJuan
     end
 
     def delete_cards(request)
-      request = [request] unless request.is_a?(Array)
+      request = [request] unless request.class == Array
       request.each do |r|
         # Grab an updated copy of the cards
         # array before starting each iteration.
@@ -517,11 +527,7 @@ class SanJuan
   def add_player(user)
     return if started
     if player = get_player(user)
-      if player.user == @bot.nick
-        say "I'm already in the game, moron."
-      else
-        say "You're already in the game, #{player}."
-      end
+      say "You're already in the game, #{player}."
       return
     end
     player = Player.new(user)
@@ -571,7 +577,6 @@ class SanJuan
         say "Please discard #{n} card#{s(n)}, #{p}."
         p_string << ", #{p}"
         p.moved = false
-        show_cards(p)
       end
     end
     if done?
@@ -599,6 +604,7 @@ class SanJuan
     notify player, "You drew: #{cards.join(', ')}" if started
     player.cards |= cards
     player.sort_cards
+    show_cards(player)
   end
 
   def deal_councillor(player)
@@ -613,9 +619,8 @@ class SanJuan
     else
       n = 0
       player.tmp_cards |= cards
-      c_string = player.tmp_cards.map { |c| n += 1; "#{B}#{n}.\)#{B} #{c}"}
-      notify player, "Pick #{i} card#{s(i)} to " +
-                     "keep: #{c_string.join(' ')}"
+      notify player, "Pick #{i} card#{s(i)} to keep: " + 
+                     stringify(player.tmp_cards, true)
     end
   end
 
@@ -648,7 +653,7 @@ class SanJuan
         player.moved = true
       else
         notify player, "Pick #{n} good#{s(n)} to produce."
-        return
+        show_buildings(player)
       end
     end
     do_turn if done?
@@ -686,6 +691,8 @@ class SanJuan
     if no_goods
       player.moved = true
       say "#{player} has nothing to trade."
+    else
+      show_buildings(player)
     end
   end
 
@@ -708,34 +715,32 @@ class SanJuan
   def do_builder(player, a)
     if a.first == 'pass'
       say "#{player} passes."
-    else
-      a.map! { |e| e.to_i - 1 }
-      cost = if player.role == :builder
-               player.cards[a.first].cost - 1
-             else
-               player.cards[a.first].cost
-             end
-      cost = 0 if cost < 0
-      if cost > a.length - 1
-        notify player, 'You must discard enough cards to build that.'
+      return true
+    end
+    cost = player.cards[a.first].cost
+    cost -= 1 if player.role == :builder
+    cost -= 1 if player.has?(:smithy) and player.cards[a.first].production?
+    cost -= 1 if player.has?(:quarry) and player.cards[a.first].violet?
+    cost = 0 if cost < 0
+    if cost > a.length - 1
+      notify player, "Pick #{cost} card#{s(cost)} to discard to build that."
+      return false
+    end
+    cards = []
+    a.each do |e|
+      if e < 0 or player.cards[e].nil?
+        notify player, 'Specify cards from your hand.'
         return false
       end
-      cards = []
-      a.each do |e|
-        if e < 0 or player.cards[e].nil?
-          notify player, 'Specify cards from your hand.'
-          return false
-        end
-        cards << player.cards[e].dup
-      end
-      player.buildings << Building.new(cards.first)
-      say "#{player} builds #{cards.first}."
-      player.delete_cards(cards[0..cost])
-      @discard |= cards[0..cost]
-      show_buildings(player)
-      show_cards(player)
-      player.max_cards == 12 if player.has?(:tower)
+      cards << player.cards[e].dup
     end
+    player.buildings << Building.new(cards.first)
+    say "#{player} builds #{cards.first}."
+    player.delete_cards(cards[0..cost])
+    @discard |= cards[1..cost]
+    show_buildings(player)
+    show_cards(player)
+    player.max_cards = 12 if player.has?(:tower)
     tmp_string = 'Need to build or pass - '  
     players.each do |p|
       next if p == player
@@ -747,14 +752,13 @@ class SanJuan
 
   def do_councillor(player, a)
     n = inventory(player)
-    unless a.length == n
+    if a.first == 'pass' or a.length != n
       notify player, "Pick #{n} card#{s(n)}."
       return false
     end
     cards = []
-    a.map! {|e| e.to_i - 1 }
     a.each do |e|
-      if e < 0 or player.tmp_cards[e].nil?
+      if player.tmp_cards[e].nil?
         notify player, 'Specify cards you were dealt.'
         return false
       end
@@ -781,9 +785,11 @@ class SanJuan
   end
 
   def do_chapel(player, a)
-    return true if a.first == 'pass'
-    n = 0
-    card = player.cards[a.first.to_i-1]
+    if a.first == 'passes'
+      say "#{player} passes."
+      return true
+    end
+    card = player.cards[a.first]
     if a.length != 1
       notify player, 'Specify one card in your hand to put under the Chapel.'
       return false
@@ -791,6 +797,7 @@ class SanJuan
       notify player, 'Specify a card in your hand.'
       return false
     end
+    n = 0
     player.buildings.each do |b|
       break if b.id == :chapel
       n += 1
@@ -808,36 +815,32 @@ class SanJuan
 
   def do_producer(player, a)
     n = inventory(player)
-    unless a.length == n
+    unless a.length == n or a.first == 'pass'
       notify player, "You must produce #{n} good#{s(n)}."
       return false
     end
-    a.map! {|e| e.to_i - 1 }
     a.each do |e|
-      if e < 0 or player.buildings[e].nil?
+      if player.buildings[e].nil?
         notify player, 'Specify one of your buildings.'
         return false
-      end
-      unless player.buildings[e].production? and not player.buildings[e].goods
+      elsif player.buildings[e].violet? or player.buildings[e].goods
         notify player, 'You must pick an open production building.'
         return false
       end
     end
     a.each { |e| player.buildings[e].goods = draw }
-    say "#{player} produces #{a.length} good#{s}."
+    say "#{player} produces #{n} good#{s(n)}."
     return true
   end
 
   def do_picker(player, a)
-    if a.first.length > 1
-      notify player, 'Specify a number.'
+    if a.first == 'pass' or not a.first.between?(0, roles.length-1)
+      notify player, 'Specify a role\'s number.'
       return false
     end
-    n = a.first.to_i - 1
-    return false unless n.between?(0, roles.length-1)
-    @phase = roles[n]
-    player.role = roles[n]
-    @roles.delete_at(n)
+    @phase = roles[a.first]
+    player.role = roles[a.first]
+    @roles.delete_at(a.first)
     @string = "#{player} is now #{phase.to_s.capitalize}."
     players.each { |p| p.moved = false }
     case phase
@@ -853,22 +856,21 @@ class SanJuan
     when :prospector
       players.each { |p| deal_prospector(p) }
     when :trader
-      market_shift
       @string << ' Pick which goods to trade.'
+      market_shift
       players.each { |p| deal_trader(p) }
-      show_market unless done?
     end
     return player.moved
   end
 
   def do_prospector(player, a)
-    unless a.length == 1 and player.tmp_cards[a.first]
+    if a.first == 'pass' or player.tmp_cards[a.first].nil?
       notify player, 'Specify a gold mine card you wish to keep.'
       return false
     end
     player.cards << player.tmp_cards[a.first]
     show_cards(player)
-    say "#{player} keeps one card from the gold mine."
+    say "#{player} keeps a card from the gold mine."
     @discard |= player.tmp_cards.pop(player.tmp_cards.length)
     tmp_string = 'Pick a gold mine card to keep'
     players.each do |p|
@@ -889,12 +891,8 @@ class SanJuan
       notify player, "You can only sell (up to) #{n} good#{s(n)}."
       return false
     end
-    a.map! { |e| e.to_i - 1 }
     a.each do |e|
-      if player.buildings[e].nil?
-        notify player, 'Specify one of your production buildings.'
-        return false
-      elsif not player.buildings[e].production?
+      if player.buildings[e].nil? or player.buildings[e].violet?
         notify player, 'Specify one of your production buildings.'
         return false
       elsif not player.buildings[e].goods
@@ -909,7 +907,7 @@ class SanJuan
       player.buildings[e].goods = nil
     end
     deal(player, n)
-    say "#{player} trades #{a.length} goods."
+    say "#{player} trades #{a.length} good#{s(a.length)}."
     p_string = 'Select which goods to trade in'
     players.each do |p|
       next if p == player
@@ -923,11 +921,10 @@ class SanJuan
 
   def do_governor(player, a)
     n = player.cards.length - player.max_cards
-    unless a.length == n
+    if a.first == 'pass' or a.length != n
       notify player, "You must discard #{n} cards."
       return false
     end
-    a.map! { |e| e.to_i - 1 }
     a.each do |e|
       if player.cards[e].nil?
         notify player, 'Discard cards from your hand.'
@@ -962,7 +959,7 @@ class SanJuan
     end
     p_string = "Pick a role, #{players.first}: "
     @string = p_string + stringify(roles)
-    say string
+    show_string
   end
 
   def done?
@@ -970,7 +967,17 @@ class SanJuan
     return true
   end
 
-  def drop_player(player, dropper=false)
+  def drop_player(a, dropper=false)
+    return unless started
+    player = case a.first
+             when 'me', nil then dropper
+             when 'bot' then g.get_player(@bot.nick)
+             else get_player(a.first, dropper)
+             end
+    unless player
+      say "#{dropper}, there is no one playing named '#{a.first}'."
+      return
+    end
     unless dropper == false or dropper == manager or dropper == player
       say "Only the game manager is allowed to drop others, #{dropper}."
       return
@@ -1089,8 +1096,10 @@ class SanJuan
 
   def processor(player, a)
     return if player.moved
+    return if a.length.zero? or started.nil?
     return if a.first.to_i < 1 and a.first != 'pass'
     player.moved = true
+    a.map! { |e| e == 'pass' ? e : e.to_i - 1 }
     player.moved = self.send("do_#{phase}", player, a)
     if done?
       if phase == :chapel
@@ -1099,11 +1108,12 @@ class SanJuan
         do_turn
       end
     elsif phase != :picker
-      say string if player.moved
+      show_string
     end
   end
 
   def replace_player(player, a)
+    return if a.length.zero?
     a.delete_at(0) if a.first.downcase == player.user.downcase
     [ 'me', 'with' ].each { |e| a.delete_at(0) if a.first.downcase == e }
     new_player = channel.get_user(a.first)
@@ -1131,12 +1141,16 @@ class SanJuan
     @bot.say who, msg, opts
   end
 
-  def show_buildings(player, a=[])
-    p = get_player(a.first) || player
+  def show_buildings(player=players, a=[])
+    p_array = get_player(a.first) || player
+    p_array = [ p_array ] unless p_array.class == Array
     if get_player(a.first)
-      say "#{p}'s buildings:" + stringify(player.buildings, true)
+      say "#{p_array.first}'s buildings: " + 
+          stringify(p_array.first.buildings)
     else
-      notify p, 'Buildings:' + stringify(player.buildings)
+      p_array.each do |p|
+        notify p, 'Buildings: ' + stringify(p.buildings, true)
+      end
     end
   end
 
@@ -1144,7 +1158,7 @@ class SanJuan
     p_array = [ p_array ] unless p_array.class == Array
     p_array.each do |p|
       cards = if p.cards.length > 0
-                stringify(player.cards, true)
+                'Cards: ' + stringify(p.cards, true)
               else
                 "#{B}(You have no cards!)#{B}"
               end
@@ -1154,7 +1168,7 @@ class SanJuan
 
   def show_market
     return unless phase == :trader
-    m_string = ''
+    m_string = 'Market prices: '
     market.first.each_key do |key|
       m_string << B + Colors[key] + key.to_s.capitalize +
                   ": #{market.first[key]} #{NormalText}"
@@ -1181,7 +1195,7 @@ class SanJuan
   def show_string
     return unless started
     say string
-    show_market if g.phase == :trader
+    show_market if phase == :trader
   end
 
   def start_game
@@ -1195,11 +1209,16 @@ class SanJuan
     a = array.dup
     n = 0
     b = if b then B else '' end
-    a.map! { |c| n += 1; "#{b}#{n}.)#{b} #{c.to_s.capitalize}"}
+    a.map! do |c|
+      n += 1
+      c = c.to_s.capitalize if c.class == Symbol
+      "#{b}#{n}.)#{b} #{c}"
+    end
     return a.join(' ')
   end
 
   def transfer_management(player, a)
+    return if a.length.zero?
     unless player == manager
       say "#{player.user}: you can't transfer ownership. " +
           "#{manager} manages this game."
@@ -1284,51 +1303,37 @@ class SanJuanPlugin < Plugin
   def message(m)
     return unless @games.key?(m.channel) and m.plugin
     g = @games[m.channel]
+    player = g.get_player(m.source.nick)
+    return if player.nil?
     a = m.message.downcase.split(' ').uniq
     a.delete_at(0) # [ "p", "2", "4" ] => [ "2", "4" ]
-    p = g.get_player(m.source.nick)
-    return if p.nil?
     case m.message.downcase
     when /^(jo?|join)( |\z)/
       g.add_player(m.source)
     when /^(bd?|buildings?)( |\z)/
-      g.show_buildings(p, a)
+      g.show_buildings(player, a)
     when /^(ca?|cards?)( |\z)/
-      g.show_cards(p)
+      g.show_cards(player)
     when /^drop( |\z)/
-      return unless p and g.started
-      victim = case a[0]
-               when 'me', nil then p
-               when 'bot' then g.get_player(@bot.nick)
-               else g.get_player(a[0], m.sourcenick.downcase)
-               end
-      unless victim
-        m.reply "There is no one playing named '#{a[0]}'."
-        return
-      end
-      g.drop_player(victim, p)
+      g.drop_player(a, player)
     when /^(r|roles?)( |\z)/, 'od'
       g.show_roles
     when /^(pa|pass)( |\z)/
-      return unless g.started
-      g.processor(p, ['pass'])
+      g.processor(player, ['pass'])
     when /^(pi?|pl|play)( |\z)/
-      return if a.length.zero? or g.started.nil?
-      g.processor(p, a)
+      g.processor(player, a)
     when /^(tu?|turn)( |\z)/
       g.show_string
     when /^replace( |\z)/
-      return if a.length.zero?
-      g.replace_player(p, a)
+      g.replace_player(player, a)
     when /^ti(me)?( |\z)/
       if g.started
-        m.reply Title + " has been in play for #{g.elapsed_time}."
+        @bot.say m.replyto, Title + " has been in play for #{g.elapsed_time}."
       else
         m.reply Title + " hasn't started yet."
       end
     when /^transfer( |\z)/
-      return if a.length.zero?
-      g.transfer_management(p, a)
+      g.transfer_management(player, a)
     end
   end
 
