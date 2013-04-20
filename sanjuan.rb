@@ -8,8 +8,8 @@
 class SanJuan
 
   Title = 'San Juan'
-
-  Max_Buildings = 12
+  Max_Buildings = 7
+  B = Bold
   Colors = { silver_smelter: Irc.color(:black, :lightgray),
              indigo_plant: Irc.color(:white, :blue),
              sugar_mill: Irc.color(:black, :white),
@@ -23,201 +23,230 @@ class SanJuan
       cost: 1,
       phase: :producer,
       vps: 1,
-      text: "Producer phase: owner produces 1 indigo",
+      keywords: [ /indigo/, /plant/ ],
+      text: 'Producer phase: owner produces 1 indigo',
       quantity: 10
     },
     sugar_mill: {
       cost: 2,
       phase: :producer,
       vps: 1,
-      text: "Producer phase: owner produces 1 sugar",
+      keywords: [ /sugar/, /mill/ ],
+      text: 'Producer phase: owner produces 1 sugar',
       quantity: 8
     },
     tobacco_storage: {
       phase: :producer,
       cost: 3,
       vps: 2,
-      text: "Producer phase: owner produces 1 tobacco",
+      keywords: [ /tobacc?o/, /storage/ ],
+      text: 'Producer phase: owner produces 1 tobacco',
       quantity: 8
     },
     coffee_roaster: {
       phase: :producer,
       cost: 4,
       vps: 2,
-      text: "Producer phase: owner produces 1 coffee",
+      keywords: [ /coff?e/, /roa?ster/ ],
+      text: 'Producer phase: owner produces 1 coffee',
       quantity: 8
     },
     silver_smelter: {
       phase: :producer,
       cost: 5,
       vps: 3,
-      text: "Producer phase: owner produces 1 silver",
+      keywords: [ /silver/, /smelter/ ],
+      text: 'Producer phase: owner produces 1 silver',
       quantity: 8
     },
     smithy: {
       phase: :builder,
       cost: 1,
       vps: 1,
-      text: "Builder phase: owner pays 1 card less when building a production building",
+      keywords: [ /smithy/ ],
+      text: 'Builder phase: owner pays 1 card less when building a production building',
       quantity: 3
     },
     gold_mine: {
       phase: :prospector,
       cost: 1,
       vps: 1,
-      text: "Prospector phase: owner turns up 4 cards from the supply; if " +
-            "all have different building costs, he made add one to his hand",
+      keywords: [ /gold/, /mine/ ],
+      text: 'Prospector phase: owner turns up 4 cards from the supply; if ' +
+            'all have different building costs, he made add one to his hand',
       quantity: 3
     },
     archive: {
       phase: :councillor,
       cost: 1,
       vps: 1,
-      text: "Councillor phase: owner may discard hand cards in addition to drawn cards",
+      keywords: [ /archive/ ],
+      text: 'Councillor phase: owner may discard hand cards in addition to drawn cards',
       quantity: 3
     },
     market_stand: {
       phase: :trader,
       cost: 2,
       vps: 1,
-      text: "Trader phase: owner takes 1 card from the supply when he sells at least 2 goods",
+      keywords: [ /stand/ ],
+      text: 'Trader phase: owner takes 1 card from the supply when he sells at least 2 goods',
       quantity: 3
     },
     poor_house: {
       phase: :builder,
       cost: 2,
       vps: 1,
-      text: "Builder phase: owner takes 1 card from the supply if he has only 0 or 1 card after building",
+      keywords: [ /poor/ ],
+      text: 'Builder phase: owner takes 1 card from the supply if he has only 0 or 1 card after building',
       quantity: 3
     },
     crane: {
       phase: :builder,
       cost: 2,
       vps: 1,
-      text: "Builder phase: owner may build over one of his building (and pay the difference)",
+      keywords: [ /crane/ ],
+      text: 'Builder phase: owner may build over one of his building (and pay the difference)',
       quantity: 3
     },
     black_market: {
       phase: :builder,
       cost: 2,
       vps: 1,
-      text: "Builder phase: owner may discard any 1 or 2  " +
-            "goods and reduce the building cost by 1 or 2 cards",
+      keywords: [ /black/ ],
+      text: 'Builder phase: owner may discard any 1 or 2  ' +
+            'goods and reduce the building cost by 1 or 2 cards',
       quantity: 3
     },
     well: {
       phase: :producer,
       cost: 2,
       vps: 1,
-      text: "Producer phase: pwmer tales 1 card from the supply when he produces at least 2 goods",
+      keywords: [ /well/ ],
+      text: 'Producer phase: pwmer tales 1 card from the supply when he produces at least 2 goods',
       quantity: 3
     },
     trading_post: {
       phase: :trader,
       cost: 2,
       vps: 1,
-      text: "Trader phase: owner may sell 2 additional goods",
+      keywords: [ /trading/, /post/ ],
+      text: 'Trader phase: owner may sell 2 additional goods',
       quantity: 3
     },
     tower: {
       phase: :governor,
       cost: 3,
       vps: 2,
-      text: "Governor phase: owner may have up to 12 cards in his hand",
+      keywords: [ /tower/ ],
+      text: 'Governor phase: owner may have up to 12 cards in his hand',
       quantity: 3
     },
     carpenter: {
       phase: :builder,
       cost: 3,
       vps: 2,
-      text: "Builder phase: owner takes 1 card from the supply after he builds a violet building",
+      keywords: [ /carpenter/ ],
+      text: 'Builder phase: owner takes 1 card from the supply after he builds a violet building',
       quantity: 3
     },
     statue: {
       phase: :monument,
       cost: 3,
       vps: 3,
-      text: "Monument: no special function",
+      keywords: [ /statue/ ],
+      text: 'Monument: no special function',
       quantity: 3
     },
     prefecture: {
       phase: :councillor,
       cost: 3,
       vps: 2,
-      text: "Councillor phase: owner keeps 1 card more from those drawn",
+      keywords: [ /prefecture/ ],
+      text: 'Councillor phase: owner keeps 1 card more from those drawn',
       quantity: 3
     },
     chapel: {
       phase: :governor,
       cost: 3,
       vps: 2,
-      text: "Governor phase: owner may place 1 hand card under his chapel (each worth 1 VP at game end)",
+      keywords: [ /chapel/ ],
+      text: 'Governor phase: owner may place 1 hand card under his chapel (each worth 1 VP at game end)',
       quantity: 3
     },
     aqueduct: {
       phase: :producer,
       cost: 3,
       vps: 2,
-      text: "Producer phase: owner produces 1 more good",
+      keywords: [ /aqu(e|a)duct/ ],
+      text: 'Producer phase: owner produces 1 more good',
       quantity: 3
     },
     quarry: {
       phase: :builder,
       cost: 4,
       vps: 2,
-      text: "Builder phase: owner pays 1 card less when building a violet building",
+      keywords: [ /quar/ ],
+      text: 'Builder phase: owner pays 1 card less when building a violet building',
       quantity: 3
     },
     victory_column: {
       phase: :monument,
       cost: 4,
       vps: 4,
-      text: "Monument: no special function",
+      keywords: [ /victory/, /column/ ],
+      text: 'Monument: no special function',
       quantity: 3
     },
     market_hall: {
       phase: :trader,
       cost: 4,
       vps: 2,
-      text: "Trader phase: owner takes 1 card more for selling one good",
+      keywords: [ /market/ ],
+      text: 'Trader phase: owner takes 1 card more for selling one good',
       quantity: 3
     },
     hero: {
       phase: :monument,
       cost: 5,
       vps: 5,
-      text: "Monument: no special function",
+      keywords: [ /hero/ ],
+      text: 'Monument: no special function',
       quantity: 3
     },
     library: {
       phase: :all,
       cost: 5,
       vps: 3,
-      text: "All phases: owner uses the privilege of his role twice",
+      keywords: [ /library/ ],
+      text: 'All phases: owner uses the privilege of his role twice',
       quantity: 3
     },
     triumphal_arch: {
       phase: :end,
       cost: 6,
-      text: "At game end: owner earns an additional 4-6-8 victory points for 1-2-3 monuments",
+      keywords: [ /triumph/, /arch/ ],
+      text: 'At game end: owner earns an additional 4-6-8 victory points for 1-2-3 monuments',
       quantity: 2
     },
     city_hall: {
       phase: :end,
       cost: 6,
-      text: "At game end: owner earns 1 additional victory point for each of his violet buildings",
+      keywords: [ /city/ ],
+      text: 'At game end: owner earns 1 additional victory point for each of his violet buildings',
       quantity: 2
     },
     guild_hall: {
       phase: :end,
       cost: 6,
-      text: "At game end: owner earns 2 additional victory points for each of his production buildings",
+      keywords: [ /guild/ ],
+      text: 'At game end: owner earns 2 additional victory points for each of his production buildings',
       quantity: 2
     },
     palace: {
       phase: :end,
       cost: 6,
-      text: "At game end: owner earns 1 additional victory point for every 4 victory points",
+      keywords: [ /palace/ ],
+      text: 'At game end: owner earns 1 additional victory point for every 4 victory points',
       quantity: 2
     },
     office_building: {
@@ -225,7 +254,8 @@ class SanJuan
       phase: :governor,
       cost: 1,
       vps: 1,
-      text: "Governor phase: owner may discard 1 or 2 cards and draw 1 or 2 new cards",
+      keywords: [ /off?ice/ ],
+      text: 'Governor phase: owner may discard 1 or 2 cards and draw 1 or 2 new cards',
       quantity: 3
     },
     guard_room: {
@@ -233,7 +263,8 @@ class SanJuan
       phase: :governor,
       cost: 1,
       vps: 1,
-      text: "Governor phase: players without Guard room reduce their hand to 6 cards",
+      keywords: [ /guard/ ],
+      text: 'Governor phase: players without Guard room reduce their hand to 6 cards',
       quantity: 3
     },
     caritas: {
@@ -241,8 +272,9 @@ class SanJuan
       phase: :builder,
       cost: 2,
       vps: 1,
-      text: "Builder phase: owner takes 1 card from the supply if he has the " +
-            "fewest buildings (does not take affect until the following phase)",
+      keywords: [ /caritas/ ],
+      text: 'Builder phase: owner takes 1 card from the supply if he has the ' +
+            'fewest buildings (does not take affect until the following phase)',
       quantity: 3
     },
     customs_office: {
@@ -250,8 +282,9 @@ class SanJuan
       phase: :councillor,
       cost: 3,
       vps: 2,
-      text: "Councillor phase: 1 good from supply on the customs " +
-            "office; Trader phase: good brings in 2 cards with the sale",
+      keywords: [ /customs/ ],
+      text: 'Councillor phase: 1 good from supply on the customs ' +
+            'office; Trader phase: good brings in 2 cards with the sale',
       quantity: 3
     },
     park: {
@@ -259,8 +292,9 @@ class SanJuan
       phase: :builder,
       cost: 3,
       vps: 2,
-      text: "Builder phase: when the park is built over, the cost of the new " +
-            "building is lowered by as much as 6 (requires a crane to be built over)",
+      keywords: [ /park/ ],
+      text: 'Builder phase: when the park is built over, the cost of the new ' +
+            'building is lowered by as much as 6 (requires a crane to be built over)',
       quantity: 3
     },
     harbor: {
@@ -268,8 +302,9 @@ class SanJuan
       phase: :trader,
       cost: 4,
       vps: 2,
-      text: "Trader phase: owner must put a sold good under " + 
-            "his harbor (each scores 1 VP at game end)",
+      keywords: [ /harbor/ ],
+      text: 'Trader phase: owner must put a sold good under ' + 
+            'his harbor (each scores 1 VP at game end)',
       quantity: 3
     },
     bank: {
@@ -277,8 +312,9 @@ class SanJuan
       phase: :governor,
       cost: 4,
       vps: 2,
-      text: "Governor phase: owner may put as many cards from his " +
-            "hand cards under his bank (each scores 1 VP at game end)",
+      keywords: [ /bank/ ],
+      text: 'Governor phase: owner may put as many cards from his ' +
+            'hand cards under his bank (each scores 1 VP at game end)',
       quantity: 3
     },
     goldsmith: {
@@ -286,22 +322,25 @@ class SanJuan
       phase: :prospector,
       cost: 5,
       vps: 3,
-      text: "Prospector phase: owner draws 1 card from supply, keeping it if no one has built one",
+      keywords: [ /gold ?smith/ ],
+      text: 'Prospector phase: owner draws 1 card from supply, keeping it if no one has built one',
       quantity: 3
     },
     residence: {
       expansion: true,
       phase: :end,
       cost: 6,
-      text: "At game end: owner scores 4-3-2-1 VPs for each set of " +
-            "three different buildings with the same building cost",
+      keywords: [ /residence/ ],
+      text: 'At game end: owner scores 4-3-2-1 VPs for each set of ' +
+            'three different buildings with the same building cost',
       quantity: 2
     },
     cathedral: {
       expansion: true,
       phase: :end,
       cost: 7,
-      text: "At game end: owner scores 4-3-2-1-0 VPs for each opponents' 6 buildings",
+      keywords: [ /cathedral/ ],
+      text: 'At game end: owner scores 4-3-2-1-0 VPs for each opponents\' 6 buildings',
       quantity: 1
     }
   }
@@ -346,8 +385,7 @@ class SanJuan
     end
 
     def production?
-      return true if phase == :producer
-      return false
+      card.production?
     end
 
     def to_s
@@ -361,7 +399,7 @@ class SanJuan
       g = if goods then '(*)' else '' end
       i = card.id.to_s.gsub('_',' ').capitalize
       v = ' ' + card.vps.to_s
-      Bold + color + s + g + i + v + NormalText
+      B + color + s + g + i + v + NormalText
     end
   
   end
@@ -382,6 +420,11 @@ class SanJuan
       @vps = Cards[id][:vps] || 0
     end
 
+    def production?
+      return true if phase == :producer
+      return false
+    end
+
     def to_s
       color = Colors[id] || Colors[:violet]
       i = id.to_s.gsub('_',' ').capitalize
@@ -392,7 +435,7 @@ class SanJuan
           elsif c == '' then ' ' + vps.to_s
           else vps.to_s
           end
-      Bold + color + i + c + color + '/' + v + NormalText
+      B + color + i + c + color + '/' + v + NormalText
     end
 
   end
@@ -445,7 +488,7 @@ class SanJuan
     end
 
     def to_s
-      Bold + @user.to_s + Bold
+      B + @user.to_s + B
     end
 
   end
@@ -494,7 +537,7 @@ class SanJuan
     if players.length == 1
       countdown = @bot.config['sanjuan.countdown']
       @bot.timer.add_once(countdown) { start_game }
-      say "Game will start in #{Bold}#{countdown}#{Bold} seconds."
+      say "Game will start in #{B}#{countdown}#{B} seconds."
     end
   end
  
@@ -514,8 +557,7 @@ class SanJuan
     if done?
       governor_phase
     else
-      p_string << '.'
-      @string = p_string
+      @string = p_string + '.'
       say string
     end
   end
@@ -535,9 +577,7 @@ class SanJuan
     if done?
       do_turn
     else
-      p_string << '.'
-      @string = p_string
-      #say string
+      @string = p_string + '.'
     end
   end
 
@@ -571,9 +611,9 @@ class SanJuan
       say "#{player} keeps #{n} card#{s(n)}."
       player.moved = true
     else
-      n, b = 0, Bold
+      n = 0
       player.tmp_cards |= cards
-      c_string = player.tmp_cards.map { |c| n += 1; "#{b}#{n}.\)#{b} #{c}"}
+      c_string = player.tmp_cards.map { |c| n += 1; "#{B}#{n}.\)#{B} #{c}"}
       notify player, "Pick #{i} card#{s(i)} to " +
                      "keep: #{c_string.join(' ')}"
     end
@@ -623,16 +663,21 @@ class SanJuan
     end
     if player.has?(:gold_mine)
       player.tmp_cards = draw(4)
-      string =  "#{player} draws 4 gold mine cards... "
+      p_string =  "#{player} draws 4 gold mine cards... "
       values = []
       player.tmp_cards.each { |e| values << e.cost }
+      cards = stringify(player.tmp_cards)
       if values.length == values.uniq.length
-        string << 'and strikes gold!'
-        notify player, ""
+        p_string << 'and strikes gold!'
+        notify player, 'Pick a card to keep: ' + cards
+      else
+        say p_string + 'no good! -- ' + cards
+        @discard |= player.tmp_cards.pop(player.tmp_cards.length)
+        player.moved = true
       end
+    else
+      player.moved = true
     end
-
-    player.moved = true
   end
 
   def deal_trader(player)
@@ -689,9 +734,13 @@ class SanJuan
       @discard |= cards[0..cost]
       show_buildings(player)
       show_cards(player)
+      player.max_cards == 12 if player.has?(:tower)
     end
     tmp_string = 'Need to build or pass - '  
-    players.each { |p| tmp_string << ", #{p}" unless p.moved }
+    players.each do |p|
+      next if p == player
+      tmp_string << ", #{p}" unless p.moved
+    end
     @string = tmp_string + '.'
     return true
   end
@@ -723,7 +772,10 @@ class SanJuan
     player.sort_cards
     show_cards(player)
     tmp_string = 'Pick which cards from the councillor to keep'
-    players.each { |p| tmp_string << ", #{p}" unless p.moved }
+    players.each do |p|
+      next if p == player
+      tmp_string << ", #{p}" unless p.moved
+    end
     @string = tmp_string + '.'
     return true
   end
@@ -743,15 +795,13 @@ class SanJuan
       break if b.id == :chapel
       n += 1
     end
-    player.buildings[n] << card
+    player.buildings[n].stash << card
     player.delete_cards(card)
     p_string = 'Put a card under your chapel or pass'
     players.each do |p|
       next if p == player
-      unless player.moved
-        p_string << ", #{p}"
-        @string = p_string + '.'
-      end
+      p_string << ", #{p}" unless p.moved
+      @string = p_string + '.'
     end
     return true
   end
@@ -812,6 +862,20 @@ class SanJuan
   end
 
   def do_prospector(player, a)
+    unless a.length == 1 and player.tmp_cards[a.first]
+      notify player, 'Specify a gold mine card you wish to keep.'
+      return false
+    end
+    player.cards << player.tmp_cards[a.first]
+    show_cards(player)
+    say "#{player} keeps one card from the gold mine."
+    @discard |= player.tmp_cards.pop(player.tmp_cards.length)
+    tmp_string = 'Pick a gold mine card to keep'
+    players.each do |p|
+      next if p == player
+      tmp_string << ", #{p}" unless p.moved
+    end
+    @string = tmp_string + '.'
     return true
   end
 
@@ -858,12 +922,12 @@ class SanJuan
   end
 
   def do_governor(player, a)
-    a.map! { |e| e.to_i - 1 }
     n = player.cards.length - player.max_cards
     unless a.length == n
       notify player, "You must discard #{n} cards."
       return false
     end
+    a.map! { |e| e.to_i - 1 }
     a.each do |e|
       if player.cards[e].nil?
         notify player, 'Discard cards from your hand.'
@@ -878,11 +942,9 @@ class SanJuan
     p_string = 'The governor demands you discard down to a full hand'
     players.each do |p|
       next if p == player
-      unless p.moved
-        p_string << ", #{p}"
-        @string = p_string + '.'
-      end
+      p_string << ", #{p}" unless p.moved
     end
+    @string = p_string + '.'
     return true
   end
 
@@ -898,10 +960,8 @@ class SanJuan
       @phase = :picker
       players.first.moved = false
     end
-    n = 0
-    p_string = "Pick a role, #{players.first}:"
-    roles.each { |r| n += 1; p_string << " #{n}.) #{r.to_s.capitalize}" }
-    @string = p_string
+    p_string = "Pick a role, #{players.first}: "
+    @string = p_string + stringify(roles)
     say string
   end
 
@@ -999,12 +1059,18 @@ class SanJuan
 
   def market_shift
     if market.empty?
-      @market = [ { indigo_plant: 1, sugar_mill: 1, tobacco_storage: 1, coffee_roaster: 2, silver_smelter: 2 },
-                  { indigo_plant: 1, sugar_mill: 1, tobacco_storage: 2, coffee_roaster: 2, silver_smelter: 2 },
-                  { indigo_plant: 1, sugar_mill: 1, tobacco_storage: 2, coffee_roaster: 2, silver_smelter: 3 },
-                  { indigo_plant: 1, sugar_mill: 2, tobacco_storage: 2, coffee_roaster: 2, silver_smelter: 3 },
-                  { indigo_plant: 1, sugar_mill: 2, tobacco_storage: 2, coffee_roaster: 3, silver_smelter: 3 }
-                ].shuffle
+      @market = [
+       { indigo_plant: 1, sugar_mill: 1, tobacco_storage: 1,
+          coffee_roaster: 2, silver_smelter: 2 },
+        { indigo_plant: 1, sugar_mill: 1, tobacco_storage: 2,
+          coffee_roaster: 2, silver_smelter: 2 },
+        { indigo_plant: 1, sugar_mill: 1, tobacco_storage: 2,
+          coffee_roaster: 2, silver_smelter: 3 },
+        { indigo_plant: 1, sugar_mill: 2, tobacco_storage: 2,
+          coffee_roaster: 2, silver_smelter: 3 },
+        { indigo_plant: 1, sugar_mill: 2, tobacco_storage: 2,
+          coffee_roaster: 3, silver_smelter: 3 }
+      ].shuffle
     else
       @market.shift
     end
@@ -1039,7 +1105,7 @@ class SanJuan
 
   def replace_player(player, a)
     a.delete_at(0) if a.first.downcase == player.user.downcase
-    [ "me", "with" ].each { |e| a.delete_at(0) if a.first.downcase == e }
+    [ 'me', 'with' ].each { |e| a.delete_at(0) if a.first.downcase == e }
     new_player = channel.get_user(a.first)
     unless new_player
       say "There is no one here named '#{a.first}'"
@@ -1050,7 +1116,7 @@ class SanJuan
     elsif get_player(new_player.nick)
       say "#{new_player.nick} is already playing #{Title}."
     else
-      say "#{player} was replaced by #{Bold + new_player.nick + Bold}!"
+      say "#{player} was replaced by #{B + new_player.nick + B}!"
       player.user = new_player
       say "#{player} is now game manager." if player == manager
     end
@@ -1067,36 +1133,22 @@ class SanJuan
 
   def show_buildings(player, a=[])
     p = get_player(a.first) || player
-    b_string = ''
-    i = 0
-    b = if get_player(a.first) then '' else Bold end
-    p.buildings.each do |e|
-      i += 1
-      b_string << " #{b}#{i}.)#{b} #{e}"
-    end
     if get_player(a.first)
-      say "#{p}'s buildings:" + b_string
+      say "#{p}'s buildings:" + stringify(player.buildings, true)
     else
-      notify p, 'Buildings:' + b_string
+      notify p, 'Buildings:' + stringify(player.buildings)
     end
   end
 
   def show_cards(p_array=players)
-   p_array = [ p_ar
-    def p_cards(player)
-    if player.cards.length > 0
-      n, b = 0, Bold
-      cards = player.cards.map { |c| n += 1; "#{b}#{n}.\)#{b} #{c}"}
-      return cards.join(' ')
-    else
-      return "#{Bold}(You have no cards!)#{Bold}"
-    end
-  end
-
-    if player
-      notify player, p_cards(player)
-    else
-      players.each { |p| notify p, p_cards(p) }
+    p_array = [ p_array ] unless p_array.class == Array
+    p_array.each do |p|
+      cards = if p.cards.length > 0
+                stringify(player.cards, true)
+              else
+                "#{B}(You have no cards!)#{B}"
+              end
+      notify p, cards
     end
   end
 
@@ -1104,7 +1156,7 @@ class SanJuan
     return unless phase == :trader
     m_string = ''
     market.first.each_key do |key|
-      m_string << Bold + Colors[key] + key.to_s.capitalize +
+      m_string << B + Colors[key] + key.to_s.capitalize +
                   ": #{market.first[key]} #{NormalText}"
     end
     say m_string
@@ -1137,6 +1189,14 @@ class SanJuan
     @started = Time.now
     show_cards
     change_governor
+  end
+
+  def stringify(array, b=false)
+    a = array.dup
+    n = 0
+    b = if b then B else '' end
+    a.map! { |c| n += 1; "#{b}#{n}.)#{b} #{c.to_s.capitalize}"}
+    return a.join(' ')
   end
 
   def transfer_management(player, a)
@@ -1196,8 +1256,9 @@ class SanJuanPlugin < Plugin
     when /rule/, /manual/
       "http://www.riograndegames.com/uploads/Game/Game_170_gameRules.pdf"
     when /stat/, /scor/
-      "#{p}#{plugin} stats <channel|user> -- displays the stats and scores for a channel or " +
-      "user. If no channel or user is specified, this command will show you your own stats."
+      "#{p}#{plugin} stats <channel|user> -- displays the stats and scores " +
+      "for a channel or user. If no channel or user is specified, this " +
+      "command will show you your own stats."
     when /cancel/, /end/, /halt/, /stop/
       "#{p}#{plugin} stop -- stops the current game"
     else
@@ -1230,13 +1291,10 @@ class SanJuanPlugin < Plugin
     case m.message.downcase
     when /^(jo?|join)( |\z)/
       g.add_player(m.source)
-    #when 'cd'
     when /^(bd?|buildings?)( |\z)/
       g.show_buildings(p, a)
     when /^(ca?|cards?)( |\z)/
       g.show_cards(p)
-    #when /^(di?|discard)( |\z)/
-    #  g.discard(a) if g.has_turn?(m.source)
     when /^drop( |\z)/
       return unless p and g.started
       victim = case a[0]
@@ -1290,7 +1348,7 @@ class SanJuanPlugin < Plugin
       remove_game(m.channel)
       @bot.say m.channel, "#{Title} stopped."
     else
-      m.reply "Only game managers may stop the game."
+      m.reply 'Only game managers may stop the game.'
     end
   end
 
