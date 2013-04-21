@@ -506,7 +506,7 @@ class SanJuan
   attr_reader :channel, :deck, :governor, :manager, :market,
               :players, :phase, :roles, :started, :string
 
-  def initialize(plugin, channel, first_player)
+  def initialize(plugin, channel, user)
     @channel = channel
     @plugin = plugin
     @bot = plugin.bot
@@ -521,7 +521,7 @@ class SanJuan
     @started = nil     # time the game started
     @string = nil      # last message to channel
     create_deck
-    add_player(first_player)
+    add_player(user)
   end
 
   def add_player(user)
@@ -540,7 +540,7 @@ class SanJuan
     end
     deal(player, player.max_cards-2)
     deal_first_building(player)
-    if players.length == 1
+    if players.length > 1
       countdown = @bot.config['sanjuan.countdown']
       @bot.timer.add_once(countdown) { start_game }
       say "Game will start in #{B}#{countdown}#{B} seconds."
@@ -548,6 +548,7 @@ class SanJuan
   end
  
   def change_governor
+    @players << @players.shift
     players.each { |p| p.role = nil }
     @roles = [ :builder, :councillor, :producer, :prospector, :trader ]
     @governor = players.first
@@ -564,7 +565,7 @@ class SanJuan
       governor_phase
     else
       @string = p_string + '.'
-      say string
+      #say string
     end
   end
 
@@ -644,6 +645,7 @@ class SanJuan
     n = inventory(player)
     if n.zero?
       say "#{player} can't produce anything."
+      player.moved = true
     else
       if n == player.open_productions
         player.buildings.each do |b| 
@@ -656,7 +658,12 @@ class SanJuan
         show_buildings(player)
       end
     end
-    do_turn if done?
+    p_string = 'Pick which production buildings to produce goods for'
+    players.each do |p|
+      next if p == player
+      p_string << ", #{p}" unless p.moved
+      @string = p_string + '.'
+    end
   end
 
   def deal_prospector(player)
@@ -682,6 +689,14 @@ class SanJuan
       end
     else
       player.moved = true
+    end
+    tmp_string = 'Pick a gold mine card to keep'
+    players.each do |p|
+      next if p == player
+      unless p.moved
+        tmp_string << ", #{p}"
+        @string = tmp_string + '.'
+      end
     end
   end
 
@@ -741,7 +756,7 @@ class SanJuan
     show_buildings(player)
     show_cards(player)
     player.max_cards = 12 if player.has?(:tower)
-    tmp_string = 'Need to build or pass - '  
+    tmp_string = 'Build or pass'  
     players.each do |p|
       next if p == player
       tmp_string << ", #{p}" unless p.moved
@@ -753,7 +768,8 @@ class SanJuan
   def do_councillor(player, a)
     n = inventory(player)
     if a.first == 'pass' or a.length != n
-      notify player, "Pick #{n} card#{s(n)}."
+      notify player, "Pick #{n} card#{s(n)} to keep: " +
+                     stringify(player.tmp_cards)
       return false
     end
     cards = []
@@ -804,6 +820,7 @@ class SanJuan
     end
     player.buildings[n].stash << card
     player.delete_cards(card)
+    say "#{player} puts a card under the chapel."
     p_string = 'Put a card under your chapel or pass'
     players.each do |p|
       next if p == player
@@ -830,10 +847,17 @@ class SanJuan
     end
     a.each { |e| player.buildings[e].goods = draw }
     say "#{player} produces #{n} good#{s(n)}."
+    p_string = 'Pick which production buildings to produce goods for'
+    players.each do |p|
+      next if p == player
+      p_string << ", #{p}" unless p.moved
+      @string = p_string + '.'
+    end
     return true
   end
 
   def do_picker(player, a)
+    return true unless player == players.first
     if a.first == 'pass' or not a.first.between?(0, roles.length-1)
       notify player, 'Specify a role\'s number.'
       return false
@@ -851,7 +875,7 @@ class SanJuan
       @string << ' Pick which cards to keep.'
       players.each { |p| deal_councillor(p) }
     when :producer
-      @string << ' Pick which goods to produce.'
+      @string << ' Pick which production buildings to produce goods for.'
       players.each { |p| deal_producer(p) }
     when :prospector
       players.each { |p| deal_prospector(p) }
@@ -946,17 +970,22 @@ class SanJuan
   end
 
   def do_turn
-    if governor.nil? or players.first.role
+    if governor.nil? or players[1].role
+      @players << @players.shift
       change_governor
       return
-    elsif phase != :governor
-      @phase = :picker
+    end
+    case phase
+    when :chapel
+      governor_phase
+      return
+    when :governor
+      players.first.moved = false
+    else
       @players << @players.shift
       players.each { |p| p.moved = false }
-    else
-      @phase = :picker
-      players.first.moved = false
     end
+    @phase = :picker
     p_string = "Pick a role, #{players.first}: "
     @string = p_string + stringify(roles)
     show_string
@@ -968,11 +997,10 @@ class SanJuan
   end
 
   def drop_player(a, dropper=false)
-    return unless started
-    player = case a.first
-             when 'me', nil then dropper
-             when 'bot' then g.get_player(@bot.nick)
-             else get_player(a.first, dropper)
+    player = if a.first.nil? or a.first == 'me'
+               dropper
+             else 
+               get_player(a.first, dropper)
              end
     unless player
       say "#{dropper}, there is no one playing named '#{a.first}'."
@@ -1095,20 +1123,16 @@ class SanJuan
   end
 
   def processor(player, a)
-    return if player.moved
-    return if a.length.zero? or started.nil?
+    return if player.moved or a.length.zero?
     return if a.first.to_i < 1 and a.first != 'pass'
     player.moved = true
+    old_phase = phase
     a.map! { |e| e == 'pass' ? e : e.to_i - 1 }
     player.moved = self.send("do_#{phase}", player, a)
     if done?
-      if phase == :chapel
-        governor_phase
-      else
-        do_turn
-      end
+      do_turn
     elsif phase != :picker
-      show_string
+      show_string if old_phase != phase or player.moved
     end
   end
 
@@ -1177,7 +1201,6 @@ class SanJuan
   end
 
   def show_roles
-    return unless started
     r_string = 'Roles -'
     players.each do |p|
       r_string << "- #{p}"
@@ -1193,7 +1216,6 @@ class SanJuan
   end
     
   def show_string
-    return unless started
     say string
     show_market if phase == :trader
   end
@@ -1269,6 +1291,28 @@ class SanJuanPlugin < Plugin
   end
   
   def help(plugin, topic='')
+    # Extract help information from Cards hash.
+    id, card = nil, nil
+    SanJuan::Cards.each_pair do |key, value|
+      a = value[:keywords]
+      a.each do |r|
+        case topic.downcase
+        when r
+          id, card = key, value
+          break
+        end
+      end
+    end
+    # Format and return card information.
+    unless card.nil?
+      color = SanJuan::Cards[card[:phase]]
+      name = id.to_s.split('_').each{|w| w.capitalize!}.join(' ')
+      cost = if card[:cost] then " (costs #{card[:cost]})" else '' end
+      vps = if card[:vps] then " (worth #{card[:vps]})" else '' end
+      help = card[:text]
+      return color + name + NormalText + cost + vps + " - " + help
+    end
+    # Check other help topics for information.
     p = @bot.config['core.address_prefix'].first
     case topic.downcase
     when /command/
@@ -1291,25 +1335,32 @@ class SanJuanPlugin < Plugin
       user = @games[m.channel].manager.user
       if m.source.nick == user
         m.reply "...you already started #{Title}."
-        return
       else
         m.reply "#{user} already started #{Title}."
-        return
       end
+    else
+      @games[m.channel] = SanJuan.new(self, m.channel, m.source)
     end
-    @games[m.channel] = SanJuan.new(self, m.channel, m.source)
   end
 
   def message(m)
     return unless @games.key?(m.channel) and m.plugin
     g = @games[m.channel]
-    player = g.get_player(m.source.nick)
-    return if player.nil?
-    a = m.message.downcase.split(' ').uniq
-    a.delete_at(0) # [ "p", "2", "4" ] => [ "2", "4" ]
     case m.message.downcase
-    when /^(jo?|join)( |\z)/
+    when 'j', 'jo', 'join'
       g.add_player(m.source)
+    when 'ti', 'time'
+      if g.started
+        @bot.say m.replyto, Title + " has been in play for #{g.elapsed_time}."
+      else
+        m.reply Title + " hasn't started yet."
+      end
+    end
+    # Messages only concerning players:
+    player = g.get_player(m.source.nick)
+    return unless player and g.started
+    a = m.message.downcase.split(' ').uniq[1..-1]
+    case m.message.downcase
     when /^(bd?|buildings?)( |\z)/
       g.show_buildings(player, a)
     when /^(ca?|cards?)( |\z)/
@@ -1326,12 +1377,6 @@ class SanJuanPlugin < Plugin
       g.show_string
     when /^replace( |\z)/
       g.replace_player(player, a)
-    when /^ti(me)?( |\z)/
-      if g.started
-        @bot.say m.replyto, Title + " has been in play for #{g.elapsed_time}."
-      else
-        m.reply Title + " hasn't started yet."
-      end
     when /^transfer( |\z)/
       g.transfer_management(player, a)
     end
