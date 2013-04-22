@@ -25,7 +25,7 @@ class SanJuan
       phase: :producer,
       vps: 1,
       keywords: [ /indigo/, /plant/ ],
-      text: 'Producer phase: owner produces 1 indigo',
+      text: 'owner produces 1 indigo',
       quantity: 10
     },
     sugar_mill: {
@@ -33,7 +33,7 @@ class SanJuan
       phase: :producer,
       vps: 1,
       keywords: [ /sugar/, /mill/ ],
-      text: 'Producer phase: owner produces 1 sugar',
+      text: 'owner produces 1 sugar',
       quantity: 8
     },
     tobacco_storage: {
@@ -41,7 +41,7 @@ class SanJuan
       cost: 3,
       vps: 2,
       keywords: [ /tobacc?o/, /storage/ ],
-      text: 'Producer phase: owner produces 1 tobacco',
+      text: 'owner produces 1 tobacco',
       quantity: 8
     },
     coffee_roaster: {
@@ -49,7 +49,7 @@ class SanJuan
       cost: 4,
       vps: 2,
       keywords: [ /coff?e/, /roa?ster/ ],
-      text: 'Producer phase: owner produces 1 coffee',
+      text: 'owner produces 1 coffee',
       quantity: 8
     },
     silver_smelter: {
@@ -57,7 +57,7 @@ class SanJuan
       cost: 5,
       vps: 3,
       keywords: [ /silver/, /smelter/ ],
-      text: 'Producer phase: owner produces 1 silver',
+      text: 'owner produces 1 silver',
       quantity: 8
     },
     smithy: {
@@ -65,7 +65,7 @@ class SanJuan
       cost: 1,
       vps: 1,
       keywords: [ /smithy/ ],
-      text: 'Builder phase: owner pays 1 card less when building a production building',
+      text: 'owner pays 1 card less when building a production building',
       quantity: 3
     },
     gold_mine: {
@@ -73,8 +73,8 @@ class SanJuan
       cost: 1,
       vps: 1,
       keywords: [ /gold/, /mine/ ],
-      text: 'Prospector phase: owner turns up 4 cards from the supply; if ' +
-            'all have different building costs, he made add one to his hand',
+      text: 'owner turns up 4 cards from the supply; if all have ' +
+            'different building costs, he made add one to his hand',
       quantity: 3
     },
     archive: {
@@ -82,7 +82,7 @@ class SanJuan
       cost: 1,
       vps: 1,
       keywords: [ /archive/ ],
-      text: 'Councillor phase: owner may discard hand cards in addition to drawn cards',
+      text: 'owner may discard hand cards in addition to drawn cards',
       quantity: 3
     },
     market_stand: {
@@ -90,7 +90,8 @@ class SanJuan
       cost: 2,
       vps: 1,
       keywords: [ /stand/ ],
-      text: 'Trader phase: owner takes 1 card from the supply when he sells at least 2 goods',
+      text: 'owner takes 1 card from the supply ' +
+            'when he sells at least 2 goods',
       quantity: 3
     },
     poor_house: {
@@ -98,7 +99,8 @@ class SanJuan
       cost: 2,
       vps: 1,
       keywords: [ /poor/ ],
-      text: 'Builder phase: owner takes 1 card from the supply if he has only 0 or 1 card after building',
+      text: 'owner takes 1 card from the supply if ' +
+            'he has only 0 or 1 card after building',
       quantity: 3
     },
     crane: {
@@ -106,7 +108,7 @@ class SanJuan
       cost: 2,
       vps: 1,
       keywords: [ /crane/ ],
-      text: 'Builder phase: owner may build over one of his building (and pay the difference)',
+      text: 'owner may build over one of his building (and pay the difference)',
       quantity: 3
     },
     black_market: {
@@ -114,16 +116,17 @@ class SanJuan
       cost: 2,
       vps: 1,
       keywords: [ /black/ ],
-      text: 'Builder phase: owner may discard any 1 or 2  ' +
-            'goods and reduce the building cost by 1 or 2 cards',
+      text: 'owner may discard any 1 or 2 goods and ' +
+            'reduce the building cost by 1 or 2 cards',
       quantity: 3
     },
     well: {
       phase: :producer,
       cost: 2,
       vps: 1,
-      keywords: [ /well/ ],
-      text: 'Producer phase: pwmer tales 1 card from the supply when he produces at least 2 goods',
+      keywords: [ /wish/, /well/ ],
+      text: 'owner takes 1 card from the supply ' +
+            'when he produces at least 2 goods',
       quantity: 3
     },
     trading_post: {
@@ -131,7 +134,7 @@ class SanJuan
       cost: 2,
       vps: 1,
       keywords: [ /trading/, /post/ ],
-      text: 'Trader phase: owner may sell 2 additional goods',
+      text: 'owner may sell 2 additional goods',
       quantity: 3
     },
     tower: {
@@ -139,7 +142,7 @@ class SanJuan
       cost: 3,
       vps: 2,
       keywords: [ /tower/ ],
-      text: 'Governor phase: owner may have up to 12 cards in his hand',
+      text: 'owner may have up to 12 cards in his hand',
       quantity: 3
     },
     carpenter: {
@@ -147,7 +150,8 @@ class SanJuan
       cost: 3,
       vps: 2,
       keywords: [ /carpenter/ ],
-      text: 'Builder phase: owner takes 1 card from the supply after he builds a violet building',
+      text: 'owner takes 1 card from the supply ' +
+            'after he builds a violet building',
       quantity: 3
     },
     statue: {
@@ -155,7 +159,7 @@ class SanJuan
       cost: 3,
       vps: 3,
       keywords: [ /statue/ ],
-      text: 'Monument: no special function',
+      text: 'no special function',
       quantity: 3
     },
     prefecture: {
@@ -163,7 +167,7 @@ class SanJuan
       cost: 3,
       vps: 2,
       keywords: [ /prefecture/ ],
-      text: 'Councillor phase: owner keeps 1 card more from those drawn',
+      text: 'owner keeps 1 card more from those drawn',
       quantity: 3
     },
     chapel: {
@@ -171,7 +175,8 @@ class SanJuan
       cost: 3,
       vps: 2,
       keywords: [ /chapel/ ],
-      text: 'Governor phase: owner may place 1 hand card under his chapel (each worth 1 VP at game end)',
+      text: 'owner may place 1 hand card under his ' +
+            'chapel (each worth 1 VP at game end)',
       quantity: 3
     },
     aqueduct: {
@@ -179,7 +184,7 @@ class SanJuan
       cost: 3,
       vps: 2,
       keywords: [ /aqu(e|a)duct/ ],
-      text: 'Producer phase: owner produces 1 more good',
+      text: 'owner produces 1 more good',
       quantity: 3
     },
     quarry: {
@@ -187,7 +192,7 @@ class SanJuan
       cost: 4,
       vps: 2,
       keywords: [ /quar/ ],
-      text: 'Builder phase: owner pays 1 card less when building a violet building',
+      text: 'owner pays 1 card less when building a violet building',
       quantity: 3
     },
     victory_column: {
@@ -195,7 +200,7 @@ class SanJuan
       cost: 4,
       vps: 4,
       keywords: [ /victory/, /column/ ],
-      text: 'Monument: no special function',
+      text: 'no special function',
       quantity: 3
     },
     market_hall: {
@@ -203,7 +208,7 @@ class SanJuan
       cost: 4,
       vps: 2,
       keywords: [ /market/ ],
-      text: 'Trader phase: owner takes 1 card more for selling one good',
+      text: 'owner takes 1 card more for selling one good',
       quantity: 3
     },
     hero: {
@@ -211,7 +216,7 @@ class SanJuan
       cost: 5,
       vps: 5,
       keywords: [ /hero/ ],
-      text: 'Monument: no special function',
+      text: 'no special function',
       quantity: 3
     },
     library: {
@@ -219,35 +224,38 @@ class SanJuan
       cost: 5,
       vps: 3,
       keywords: [ /library/ ],
-      text: 'All phases: owner uses the privilege of his role twice',
+      text: 'owner uses the privilege of his role twice',
       quantity: 3
     },
     triumphal_arch: {
       phase: :end,
       cost: 6,
       keywords: [ /triumph/, /arch/ ],
-      text: 'At game end: owner earns an additional 4-6-8 victory points for 1-2-3 monuments',
+      text: 'owner earns an additional 4-6-8 ' +
+            'victory points for 1-2-3 monuments',
       quantity: 2
     },
     city_hall: {
       phase: :end,
       cost: 6,
       keywords: [ /city/ ],
-      text: 'At game end: owner earns 1 additional victory point for each of his violet buildings',
+      text: 'owner earns 1 additional victory point ' + 
+            'for each of his violet buildings',
       quantity: 2
     },
     guild_hall: {
       phase: :end,
       cost: 6,
       keywords: [ /guild/ ],
-      text: 'At game end: owner earns 2 additional victory points for each of his production buildings',
+      text: 'owner earns 2 additional victory points ' +
+            'for each of his production buildings',
       quantity: 2
     },
     palace: {
       phase: :end,
       cost: 6,
       keywords: [ /palace/ ],
-      text: 'At game end: owner earns 1 additional victory point for every 4 victory points',
+      text: 'owner earns 1 additional victory point for every 4 victory points',
       quantity: 2
     },
     office_building: {
@@ -256,7 +264,7 @@ class SanJuan
       cost: 1,
       vps: 1,
       keywords: [ /off?ice/ ],
-      text: 'Governor phase: owner may discard 1 or 2 cards and draw 1 or 2 new cards',
+      text: 'owner may discard 1 or 2 cards and draw 1 or 2 new cards',
       quantity: 3
     },
     guard_room: {
@@ -265,7 +273,7 @@ class SanJuan
       cost: 1,
       vps: 1,
       keywords: [ /guard/ ],
-      text: 'Governor phase: players without Guard room reduce their hand to 6 cards',
+      text: 'players without Guard room reduce their hand to 6 cards',
       quantity: 3
     },
     caritas: {
@@ -274,8 +282,8 @@ class SanJuan
       cost: 2,
       vps: 1,
       keywords: [ /caritas/ ],
-      text: 'Builder phase: owner takes 1 card from the supply if he has the ' +
-            'fewest buildings (does not take affect until the following phase)',
+      text: 'owner takes 1 card from the supply if he has the fewest ' +
+            'buildings (does not take affect until the following phase)',
       quantity: 3
     },
     customs_office: {
@@ -284,8 +292,8 @@ class SanJuan
       cost: 3,
       vps: 2,
       keywords: [ /customs/ ],
-      text: 'Councillor phase: 1 good from supply on the customs ' +
-            'office; Trader phase: good brings in 2 cards with the sale',
+      text: '1 good from supply on the customs office; ' +
+            ' Trader phase: good brings in 2 cards with the sale',
       quantity: 3
     },
     park: {
@@ -294,8 +302,8 @@ class SanJuan
       cost: 3,
       vps: 2,
       keywords: [ /park/ ],
-      text: 'Builder phase: when the park is built over, the cost of the new ' +
-            'building is lowered by as much as 6 (requires a crane to be built over)',
+      text: 'when the park is built over, the cost of the new building ' +
+            'is lowered by as much as 6 (requires a crane to be built over)',
       quantity: 3
     },
     harbor: {
@@ -304,8 +312,8 @@ class SanJuan
       cost: 4,
       vps: 2,
       keywords: [ /harbor/ ],
-      text: 'Trader phase: owner must put a sold good under ' + 
-            'his harbor (each scores 1 VP at game end)',
+      text: 'owner must put a sold good under his ' + 
+            'harbor (each scores 1 VP at game end)',
       quantity: 3
     },
     bank: {
@@ -314,8 +322,8 @@ class SanJuan
       cost: 4,
       vps: 2,
       keywords: [ /bank/ ],
-      text: 'Governor phase: owner may put as many cards from his ' +
-            'hand cards under his bank (each scores 1 VP at game end)',
+      text: 'owner may put as many cards from his hand cards ' +
+            'under his bank (each scores 1 VP at game end)',
       quantity: 3
     },
     goldsmith: {
@@ -324,7 +332,7 @@ class SanJuan
       cost: 5,
       vps: 3,
       keywords: [ /gold ?smith/ ],
-      text: 'Prospector phase: owner draws 1 card from supply, keeping it if no one has built one',
+      text: 'owner draws 1 card from supply, keeping it if no one has built one',
       quantity: 3
     },
     residence: {
@@ -332,8 +340,8 @@ class SanJuan
       phase: :end,
       cost: 6,
       keywords: [ /residence/ ],
-      text: 'At game end: owner scores 4-3-2-1 VPs for each set of ' +
-            'three different buildings with the same building cost',
+      text: 'owner scores 4-3-2-1 VPs for each set of three ' +
+            'different buildings with the same building cost',
       quantity: 2
     },
     cathedral: {
@@ -341,29 +349,19 @@ class SanJuan
       phase: :end,
       cost: 7,
       keywords: [ /cathedral/ ],
-      text: 'At game end: owner scores 4-3-2-1-0 VPs for each opponents\' 6 buildings',
+      text: 'owner scores 4-3-2-1-0 VPs for each opponents\' 6 buildings',
       quantity: 1
     }
   }
   Events = {
-    free_build: {
-      text: 'each player may build a building with building costs of up to 4 free of charge'
-    },
-    governor_visit: {
-      text: 'an already used role may be used again'
-    },
-    taxes: {
-      text: 'each other player must discard 1 card from his hand'
-    },
-    debt_relief: {
-      text: 'each player draws 3 cards from the supply'
-    },
-    earthquake: {
-      text: 'each player must destroy any 1 of his buildings'
-    },
-    general_amnesty: {
-      text: 'each player may exchange any number of cards from his hand with the supply'
-    }
+    free_build: 'each player may build a building with ' +
+                'building costs of up to 4 free of charge',
+    governor_visit: 'an already used role may be used again',
+    taxes: 'each other player must discard 1 card from his hand',
+    debt_relief: 'each player draws 3 cards from the supply',
+    earthquake: 'each player must destroy any 1 of his buildings',
+    general_amnesty: 'each player may exchange any number of ' +
+                     'cards from his hand with the supply'
   }
 
 
@@ -503,8 +501,8 @@ class SanJuan
 
   end
 
-  attr_reader :channel, :deck, :governor, :manager, :market,
-              :players, :phase, :roles, :started, :string
+  attr_reader :channel, :deck, :governor, :join_timer, :manager,
+              :market, :players, :phase, :roles, :started, :string
 
   def initialize(plugin, channel, user)
     @channel = channel
@@ -512,6 +510,7 @@ class SanJuan
     @bot = plugin.bot
     @deck = []         # card stock
     @discard = []      # used cards
+    @join_timer = nil  # timer for countdown
     @manager = nil     # player that started the game
     @market = []       # market prices
     @players = []      # players currently in game
@@ -540,9 +539,11 @@ class SanJuan
     end
     deal(player, player.max_cards-2)
     deal_first_building(player)
-    if players.length > 1
+    if @join_timer
+      @bot.timer.reschedule(@join_timer, 10)
+    elsif players.length > 1
       countdown = @bot.config['sanjuan.countdown']
-      @bot.timer.add_once(countdown) { start_game }
+      @join_timer = @bot.timer.add_once(countdown) { start_game }
       say "Game will start in #{B}#{countdown}#{B} seconds."
     end
   end
@@ -1021,17 +1022,15 @@ class SanJuan
       end
       say "#{manager} is now game manager."
     end
+    say "#{player} has been removed from the game."
+    @discard |= player.cards
+    @players.delete(player)
     # If the manager drops the only other player, end the game.
-    if players.length < 3
+    if players.length < 2
       say "#{player} has been removed from the game. #{Title} stopped."
       @plugin.remove_game(channel)
       return
     end
-    say "#{player} has been removed from the game."
-    @discard |= player.cards
-    @dropouts << player
-    @players.delete(player)
-    end_game if players.length < 2
   end
 
   def elapsed_time
@@ -1304,18 +1303,44 @@ class SanJuanPlugin < Plugin
       end
     end
     # Format and return card information.
-    unless card.nil?
-      color = SanJuan::Cards[card[:phase]]
-      name = id.to_s.split('_').each{|w| w.capitalize!}.join(' ')
-      cost = if card[:cost] then " (costs #{card[:cost]})" else '' end
-      vps = if card[:vps] then " (worth #{card[:vps]})" else '' end
-      help = card[:text]
-      return color + name + NormalText + cost + vps + " - " + help
+    unless id.nil?
+      color = SanJuan::Colors[id] || SanJuan::Colors[:violet]
+      cost = if card[:cost] then " (cost: #{card[:cost]}" else '' end
+      vps = if card[:vps] then "victory points: #{card[:vps]})" else '' end
+      phase = case card[:phase]
+              when :all then 'All phases: '
+              when :monument then 'Monument: '
+              when :end then 'At game end: '
+              else card[:phase].to_s.capitalize + ' phase: '
+              end
+      return Bold + color + id.to_s.capitalize + NormalText +
+             cost + ' / ' + vps + " - " + phase + card[:text]
     end
     # Check other help topics for information.
     p = @bot.config['core.address_prefix'].first
     case topic.downcase
+    when /card/
+      "Cards names are followed by their #{SanJuan::Colors[:cost]}cost " +
+      "#{NormalText}and victory points. The special functions of each " +
+      "card can be found by typing #{p}help #{plugin} <card>; See the " +
+      "manual for any other card-realated questions."
+    when /building/
+      'Building names are followed by their worth in victory points. ' +
+      'Production buildings are marked * when they have produced goods. ' +
+      'Special buildings like chapel or bank are marked with a | for ' +
+      'every card they are storing.'
     when /command/
+      'play/pick cards: p <card #> -- build: p <card #> <discard #> -- ' +
+      'produce/trade: p <building #> -- pass -- pa (when applicable) ' +
+      'show roles: r -- show turn: t -- replace: replace [with] <user> ' +
+      "(gives your spot in game to another user) -- #{p}help #{plugin} " +
+      'manager for manager-specific commands'
+    when /manage/, /transfer/, /xfer/
+      'The player that starts the game is the game manager. ' +
+      'Game managers may stop the game at any time, or transfer ownership ' +
+      "by typing 'transfer [game to] <player>'. Managers may replace " +
+      'themselves as well as other players in the game by typing ' +
+      "'replace <user> [with] <nick>'"
     when /rule/, /manual/
       "http://www.riograndegames.com/uploads/Game/Game_170_gameRules.pdf"
     when /stat/, /scor/
@@ -1323,20 +1348,20 @@ class SanJuanPlugin < Plugin
       "for a channel or user. If no channel or user is specified, this " +
       "command will show you your own stats."
     when /cancel/, /end/, /halt/, /stop/
-      "#{p}#{plugin} stop -- stops the current game"
+      "#{p}#{plugin} stop -- Stops the current game; Only game " +
+      'managers and bot owners can stop a game in progress.'
     else
       "#{Title}, an adaption of the card game by Alea and Rio Grande Games. " +
-      "#{Bold}Help topics:#{Bold} commands, manual, stats, stop"
+      "#{Bold}Help topics:#{Bold} cards, commands, manager, manual, stats, stop"
     end
   end
 
   def create_game(m, plugin)
-    if @games.key?(m.channel)
-      user = @games[m.channel].manager.user
-      if m.source.nick == user
+    if g = @games[m.channel]
+      if m.source == g.manager.user
         m.reply "...you already started #{Title}."
       else
-        m.reply "#{user} already started #{Title}."
+        m.reply "#{g.manager.user} already started #{Title}."
       end
     else
       @games[m.channel] = SanJuan.new(self, m.channel, m.source)
@@ -1344,8 +1369,7 @@ class SanJuanPlugin < Plugin
   end
 
   def message(m)
-    return unless @games.key?(m.channel) and m.plugin
-    g = @games[m.channel]
+    return unless m.plugin and g = @games[m.channel]
     case m.message.downcase
     when 'j', 'jo', 'join'
       g.add_player(m.source)
@@ -1384,19 +1408,21 @@ class SanJuanPlugin < Plugin
 
   # Called from within the game.
   def remove_game(channel)
+    if t = @games[channel].join_timer
+      @bot.timer.remove(t)
+    end
     @games.delete(channel)
   end
 
   def stop_game(m, plugin=nil)
-    if @games[m.channel].nil?
+    unless g = @games[m.channel]
       m.reply "No one is playing #{Title} here."
       return
     end
-    manager = @games[m.channel].manager
     player = @games[m.channel].get_player(m.source.nick)
-    if manager == player or @bot.auth.irc_to_botuser(m.source).owner?
+    if g.manager == player or @bot.auth.irc_to_botuser(m.source).owner?
       remove_game(m.channel)
-      @bot.say m.channel, "#{Title} stopped."
+      @bot.say m.replyto, "#{Title} stopped."
     else
       m.reply 'Only game managers may stop the game.'
     end
