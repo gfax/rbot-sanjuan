@@ -9,6 +9,7 @@ class SanJuan
 
   Title = 'San Juan'
   Max_Buildings = 12
+  Starting_Cards = 4
 
   B = Bold
   Colors = { silver_smelter: Irc.color(:black, :lightgray),
@@ -77,6 +78,7 @@ class SanJuan
             'different building costs, he made add one to his hand',
       quantity: 3
     },
+    # test this
     archive: {
       phase: :councillor,
       cost: 1,
@@ -85,6 +87,7 @@ class SanJuan
       text: 'owner may discard hand cards in addition to drawn cards',
       quantity: 3
     },
+    # test this
     market_stand: {
       phase: :trader,
       cost: 2,
@@ -94,6 +97,7 @@ class SanJuan
             'when he sells at least 2 goods',
       quantity: 3
     },
+    # test this
     poor_house: {
       phase: :builder,
       cost: 2,
@@ -103,6 +107,7 @@ class SanJuan
             'he has only 0 or 1 card after building',
       quantity: 3
     },
+    # test this
     crane: {
       phase: :builder,
       cost: 2,
@@ -111,6 +116,7 @@ class SanJuan
       text: 'owner may build over one of his building (and pay the difference)',
       quantity: 3
     },
+    # test this
     black_market: {
       phase: :builder,
       cost: 2,
@@ -120,6 +126,7 @@ class SanJuan
             'reduce the building cost by 1 or 2 cards',
       quantity: 3
     },
+    # test this
     well: {
       phase: :producer,
       cost: 2,
@@ -129,6 +136,7 @@ class SanJuan
             'when he produces at least 2 goods',
       quantity: 3
     },
+    # test this
     trading_post: {
       phase: :trader,
       cost: 2,
@@ -145,6 +153,7 @@ class SanJuan
       text: 'owner may have up to 12 cards in his hand',
       quantity: 3
     },
+    # test this
     carpenter: {
       phase: :builder,
       cost: 3,
@@ -154,6 +163,7 @@ class SanJuan
             'after he builds a violet building',
       quantity: 3
     },
+    # test this
     statue: {
       phase: :monument,
       cost: 3,
@@ -162,6 +172,7 @@ class SanJuan
       text: 'no special function',
       quantity: 3
     },
+    # test this
     prefecture: {
       phase: :councillor,
       cost: 3,
@@ -187,6 +198,7 @@ class SanJuan
       text: 'owner produces 1 more good',
       quantity: 3
     },
+    # test this
     quarry: {
       phase: :builder,
       cost: 4,
@@ -203,6 +215,7 @@ class SanJuan
       text: 'no special function',
       quantity: 3
     },
+    # test this
     market_hall: {
       phase: :trader,
       cost: 4,
@@ -219,6 +232,7 @@ class SanJuan
       text: 'no special function',
       quantity: 3
     },
+    # test this
     library: {
       phase: :all,
       cost: 5,
@@ -227,6 +241,7 @@ class SanJuan
       text: 'owner uses the privilege of his role twice',
       quantity: 3
     },
+    # test this
     triumphal_arch: {
       phase: :end,
       cost: 6,
@@ -235,6 +250,7 @@ class SanJuan
             'victory points for 1-2-3 monuments',
       quantity: 2
     },
+    # test this
     city_hall: {
       phase: :end,
       cost: 6,
@@ -243,6 +259,7 @@ class SanJuan
             'for each of his violet buildings',
       quantity: 2
     },
+    # test this
     guild_hall: {
       phase: :end,
       cost: 6,
@@ -251,6 +268,7 @@ class SanJuan
             'for each of his production buildings',
       quantity: 2
     },
+    # test this
     palace: {
       phase: :end,
       cost: 6,
@@ -258,6 +276,7 @@ class SanJuan
       text: 'owner earns 1 additional victory point for every 4 victory points',
       quantity: 2
     },
+    # test this
     office_building: {
       expansion: true,
       phase: :governor,
@@ -267,6 +286,7 @@ class SanJuan
       text: 'owner may discard 1 or 2 cards and draw 1 or 2 new cards',
       quantity: 3
     },
+    # test this
     guard_room: {
       expansion: true,
       phase: :governor,
@@ -276,6 +296,7 @@ class SanJuan
       text: 'players without Guard room reduce their hand to 6 cards',
       quantity: 3
     },
+    # test this
     caritas: {
       expansion: true,
       phase: :builder,
@@ -296,6 +317,7 @@ class SanJuan
             ' Trader phase: good brings in 2 cards with the sale',
       quantity: 3
     },
+    # test this
     park: {
       expansion: true,
       phase: :builder,
@@ -306,6 +328,7 @@ class SanJuan
             'is lowered by as much as 6 (requires a crane to be built over)',
       quantity: 3
     },
+    # test this
     harbor: {
       expansion: true,
       phase: :trader,
@@ -316,6 +339,7 @@ class SanJuan
             'harbor (each scores 1 VP at game end)',
       quantity: 3
     },
+    # test this
     bank: {
       expansion: true,
       phase: :governor,
@@ -326,6 +350,7 @@ class SanJuan
             'under his bank (each scores 1 VP at game end)',
       quantity: 3
     },
+    # test this
     goldsmith: {
       expansion: true,
       phase: :prospector,
@@ -335,6 +360,7 @@ class SanJuan
       text: 'owner draws 1 card from supply, keeping it if no one has built one',
       quantity: 3
     },
+    # test this
     residence: {
       expansion: true,
       phase: :end,
@@ -344,6 +370,7 @@ class SanJuan
             'different buildings with the same building cost',
       quantity: 2
     },
+    # test this
     cathedral: {
       expansion: true,
       phase: :end,
@@ -451,13 +478,14 @@ class SanJuan
 
   class Player
 
-    attr_accessor :user, :buildings, :cards,
+    attr_accessor :user, :buildings, :cards, :discard,
                   :max_cards, :moved, :role, :tmp_cards
 
     def initialize(user)
       @user = user
       @buildings = []
       @cards = []
+      @discard = nil   # number of cards to discard
       @max_cards = 7   # dynamic hand card size limit
       @moved = true    # false until played or passed
       @tmp_cards = []  # used for councillor, goldmine, etc.
@@ -537,7 +565,7 @@ class SanJuan
     else
       say "#{player} joins #{Title}."
     end
-    deal(player, player.max_cards-2)
+    deal(player, Starting_Cards)
     deal_first_building(player)
     if @join_timer
       @bot.timer.reschedule(@join_timer, 10)
@@ -551,10 +579,9 @@ class SanJuan
   def change_governor
     @players << @players.shift
     players.each { |p| p.role = nil }
-    @roles = [ :builder, :councillor, :producer, :prospector, :trader ]
     @governor = players.first
-    say "#{governor} is now governor."
     @phase = :chapel
+    say "#{governor} is now governor."
     p_string = 'Place a card under your chapel or pass'
     players.each do |p|
       if p.has?(:chapel)
@@ -566,16 +593,18 @@ class SanJuan
       governor_phase
     else
       @string = p_string + '.'
-      #say string
+      show_string
     end
   end
 
   def governor_phase
+    @roles = [ :builder, :councillor, :producer, :prospector, :trader ]
     @phase = :governor
     p_string = 'The governor demands you discard down to a full hand'
     players.each do |p|
-      if p.cards.length > p.max_cards
-        n = p.cards.length - p.max_cards
+      if p.cards.length > p.max_cards or p.discard
+        # p.discard if sanjuan.start_handicap is enabled
+        n = p.discard || (p.cards.length - p.max_cards)
         say "Please discard #{n} card#{s(n)}, #{p}."
         p_string << ", #{p}"
         p.moved = false
@@ -601,12 +630,13 @@ class SanJuan
   end
 
   def deal(player, n=1)
-    return if n < 1
+    return 0 if n < 1
     cards = draw(n)
     notify player, "You drew: #{cards.join(', ')}" if started
     player.cards |= cards
     player.sort_cards
     show_cards(player)
+    return n
   end
 
   def deal_councillor(player)
@@ -684,10 +714,11 @@ class SanJuan
         p_string << 'and strikes gold!'
         notify player, 'Pick a card to keep: ' + cards
       else
-        say p_string + 'no good! -- ' + cards
+        p_string << 'no good! -- ' + cards
         @discard |= player.tmp_cards.pop(player.tmp_cards.length)
         player.moved = true
       end
+      say p_string
     else
       player.moved = true
     end
@@ -945,7 +976,7 @@ class SanJuan
   end
 
   def do_governor(player, a)
-    n = player.cards.length - player.max_cards
+    n = player.discard || (player.cards.length - player.max_cards)
     if a.first == 'pass' or a.length != n
       notify player, "You must discard #{n} cards."
       return false
@@ -961,6 +992,7 @@ class SanJuan
       player.delete_cards(player.cards[e])
     end
     say "#{player} discards #{n} card#{s(n)}."
+    player.discard = nil # Don't force player to discard any longer.
     p_string = 'The governor demands you discard down to a full hand'
     players.each do |p|
       next if p == player
@@ -1222,6 +1254,10 @@ class SanJuan
   def start_game
     @players.shuffle!
     @started = Time.now
+    if @bot.config['start.handicap']
+      n = 0
+      players.each { |p| p.discard = deal(p, n); n+= 1 }
+    end
     show_cards
     change_governor
   end
@@ -1271,15 +1307,22 @@ class SanJuanPlugin < Plugin
     :default => 45, :validate => Proc.new{|v| v > 0},
     :desc => 'Number of seconds before starting a game of San Juan.'
 
+  Config.register Config::BooleanValue.new 'sanjuan.start_handicap',
+    :default => false,
+    :desc => 'Deal +1 card for every player after the first player. ' +
+             '(See Variant section of the manual for more information.)'
+
   Config.register Config::BooleanValue.new 'sanjuan.expansion',
     :default => false,
-    :desc => 'Include the expansion cards in the deck: Office build, Caritas, ' +
-             'Customs office, Park, Harbor, Bank, Goldsmith, Residence, Cathedral'
+    :desc => 'Include the expansion cards in the deck: ' +
+             'Office building, Caritas, Customs office, ' +
+             'Park, Harbor, Bank, Goldsmith, Residence, Cathedral'
 
   Config.register Config::BooleanValue.new 'sanjuan.events',
     :default => false,
-    :desc => 'Include events from the Treasure Chest: Free build, Governor ' +
-             'visit, Taxes, Debt relief, Earthquake, General amnesty'
+    :desc => 'Include events from the Treasure Chest: ' +
+             'Free build, Governor visit, Taxes, ' +
+             'Debt relief, Earthquake, General amnesty'
 
 
   attr :games
