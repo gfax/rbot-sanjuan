@@ -485,7 +485,7 @@ class SanJuan
       @user = user
       @buildings = []
       @cards = []
-      @discard = nil   # number of cards to discard
+      @discard = 0     # number of cards to discard
       @max_cards = 7   # dynamic hand card size limit
       @moved = true    # false until played or passed
       @tmp_cards = []  # used for councillor, goldmine, etc.
@@ -602,9 +602,9 @@ class SanJuan
     @phase = :governor
     p_string = 'The governor demands you discard down to a full hand'
     players.each do |p|
-      if p.cards.length > p.max_cards or p.discard
+      if p.cards.length > p.max_cards or p.discard > 0
         # p.discard if sanjuan.start_handicap is enabled
-        n = p.discard || (p.cards.length - p.max_cards)
+        n = p.discard > 0 ? p.discard : p.cards.length - p.max_cards
         say "Please discard #{n} card#{s(n)}, #{p}."
         p_string << ", #{p}"
         p.moved = false
@@ -976,7 +976,11 @@ class SanJuan
   end
 
   def do_governor(player, a)
-    n = player.discard || (player.cards.length - player.max_cards)
+    n = if player.discard > 0
+          player.discard
+        else
+          player.cards.length - player.max_cards
+        end
     if a.first == 'pass' or a.length != n
       notify player, "You must discard #{n} cards."
       return false
@@ -992,7 +996,7 @@ class SanJuan
       player.delete_cards(player.cards[e])
     end
     say "#{player} discards #{n} card#{s(n)}."
-    player.discard = nil # Don't force player to discard any longer.
+    player.discard = 0 # Don't force player to discard any longer.
     p_string = 'The governor demands you discard down to a full hand'
     players.each do |p|
       next if p == player
@@ -1029,17 +1033,15 @@ class SanJuan
     return true
   end
 
-  def drop_player(a, dropper=false)
-    player = if a.first.nil? or a.first == 'me'
-               dropper
-             else 
-               get_player(a.first, dropper)
-             end
-    unless player
+  def drop_player(dropper, a)
+    case player = a.first 
+    when nil, 'me' then dropper
+    else get_player(a.first, dropper)
+    end
+    if player.nil?
       say "#{dropper}, there is no one playing named '#{a.first}'."
       return
-    end
-    unless dropper == false or dropper == manager or dropper == player
+    elsif player != dropper and dropper != manager
       say "Only the game manager is allowed to drop others, #{dropper}."
       return
     end
@@ -1056,21 +1058,24 @@ class SanJuan
     end
     say "#{player} has been removed from the game."
     @discard |= player.cards
+    player.buildings.each do |b|
+      @discard << b.card
+      @discard << b.goods if b.goods
+      @discard |= b.stash
+    end
     @players.delete(player)
     # If the manager drops the only other player, end the game.
     if players.length < 2
       say "#{player} has been removed from the game. #{Title} stopped."
       @plugin.remove_game(channel)
-      return
+    else
+      do_turn if done?
     end
   end
 
   def elapsed_time
-    if started
-      Utils.secs_to_string(Time.now-started).gsub(/\[|\]|"/,'')
-    else
-      nil
-    end
+    return nil if started
+    return Utils.secs_to_string(Time.now-started)
   end
 
   def get_player(user, source=nil)
@@ -1167,19 +1172,37 @@ class SanJuan
     end
   end
 
-  def replace_player(player, a)
-    return if a.length.zero?
-    a.delete_at(0) if a.first.downcase == player.user.downcase
-    [ 'me', 'with' ].each { |e| a.delete_at(0) if a.first.downcase == e }
-    new_player = channel.get_user(a.first)
-    unless new_player
-      say "There is no one here named '#{a.first}'"
+  def replace_player(replacer, a)
+    old_player = new_player = nil
+    a.each do |e|
+      next if e == @bot.nick.downcase
+      if old_player.nil?
+        e = replacer.user.nick if e == 'me'
+        old_player = channel.get_user(e)
+      elsif new_player.nil?
+        new_player = channel.get_user(e)
+      end
+    end
+    unless old_player
+      notify replacer, "Specify a replacement user, #{replacer.user}."
       return
     end
-    if player.user == new_player.nick
-      say "You're already playing, #{player.user}."
+    # Player only specified one name. Assume that is the new player.
+    unless new_player
+      new_player = old_player
+      old_player = channel.get_user(replacer.user.nick)
+    end
+    say "1"
+    if replacer.user == new_player
+      notify replacer, "You're already playing, #{replacer.user}."
+    elsif old_player == new_player
+      notify replacer, 'Replace someone with someone else.'
     elsif get_player(new_player.nick)
-      say "#{new_player.nick} is already playing #{Title}."
+      notify replacer, "#{new_player.nick} is already playing #{Title}."
+    elsif not player = get_player(old_player) # assign player or return nil
+      notify replacer, "#{old_player} is not playing #{Title}."
+    elsif player != replacer and replacer != manager
+      notify replacer, 'Only game managers can replace other players.'
     else
       say "#{player} was replaced by #{B + new_player.nick + B}!"
       player.user = new_player
@@ -1254,9 +1277,10 @@ class SanJuan
   def start_game
     @players.shuffle!
     @started = Time.now
-    if @bot.config['start.handicap']
+    if @bot.config['sanjuan.start_handicap']
       n = 0
       players.each { |p| p.discard = deal(p, n); n+= 1 }
+      @players = [ @players.pop ] + players
     end
     show_cards
     change_governor
@@ -1433,12 +1457,12 @@ class SanJuanPlugin < Plugin
     when /^(ca?|cards?)( |\z)/
       g.show_cards(player)
     when /^drop( |\z)/
-      g.drop_player(a, player)
+      g.drop_player(player, a)
     when /^(r|roles?)( |\z)/, 'od'
       g.show_roles
     when /^(pa|pass)( |\z)/
       g.processor(player, ['pass'])
-    when /^(pi?|pl|play)( |\z)/
+    when /^(pi?|pl|di?|play)( |\z)/
       g.processor(player, a)
     when /^(tu?|turn)( |\z)/
       g.show_string
