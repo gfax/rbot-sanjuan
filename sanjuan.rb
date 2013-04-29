@@ -78,7 +78,6 @@ class SanJuan
             'different building costs, he made add one to his hand',
       quantity: 3
     },
-    # test this
     archive: {
       phase: :councillor,
       cost: 1,
@@ -641,7 +640,7 @@ class SanJuan
 
   def deal_councillor(player)
     n = if player.role == :councillor then 5 else 2 end
-    n += 3 if player.has?(:library)
+    n += 3 if player.role == :councillor and player.has?(:library)
     i = inventory(player)
     cards = draw(n)
     if i >= n
@@ -649,10 +648,13 @@ class SanJuan
       say "#{player} keeps #{n} card#{s(n)}."
       player.moved = true
     else
-      n = 0
-      player.tmp_cards |= cards
-      notify player, "Pick #{i} card#{s(i)} to keep: " + 
-                     stringify(player.tmp_cards, true)
+      if player.has?(:archive)
+        player.cards |= cards
+        player.discard = n - i
+      else
+        player.tmp_cards |= cards
+      end
+      show_councillor_cards(player)
     end
   end
 
@@ -762,32 +764,32 @@ class SanJuan
   def do_builder(player, a)
     if a.first == 'pass'
       say "#{player} passes."
-      return true
-    end
-    cost = player.cards[a.first].cost
-    cost -= 1 if player.role == :builder
-    cost -= 1 if player.has?(:smithy) and player.cards[a.first].production?
-    cost -= 1 if player.has?(:quarry) and player.cards[a.first].violet?
-    cost = 0 if cost < 0
-    if cost > a.length - 1
-      notify player, "Pick #{cost} card#{s(cost)} to discard to build that."
-      return false
-    end
-    cards = []
-    a.each do |e|
-      if e < 0 or player.cards[e].nil?
-        notify player, 'Specify cards from your hand.'
+    else
+      cost = player.cards[a.first].cost
+      cost -= 1 if player.role == :builder
+      cost -= 1 if player.has?(:smithy) and player.cards[a.first].production?
+      cost -= 1 if player.has?(:quarry) and player.cards[a.first].violet?
+      cost = 0 if cost < 0
+      if cost > a.length - 1
+        notify player, "Pick #{cost} card#{s(cost)} to discard to build that."
         return false
       end
-      cards << player.cards[e].dup
+      cards = []
+      a.each do |e|
+        if e < 0 or player.cards[e].nil?
+          notify player, 'Specify cards from your hand.'
+          return false
+        end
+        cards << player.cards[e].dup
+      end
+      player.buildings << Building.new(cards.first)
+      say "#{player} builds #{cards.first}."
+      player.delete_cards(cards[0..cost])
+      @discard |= cards[1..cost]
+      show_buildings(player)
+      show_cards(player)
+      player.max_cards = 12 if player.has?(:tower)
     end
-    player.buildings << Building.new(cards.first)
-    say "#{player} builds #{cards.first}."
-    player.delete_cards(cards[0..cost])
-    @discard |= cards[1..cost]
-    show_buildings(player)
-    show_cards(player)
-    player.max_cards = 12 if player.has?(:tower)
     tmp_string = 'Build or pass'  
     players.each do |p|
       next if p == player
@@ -798,32 +800,45 @@ class SanJuan
   end
 
   def do_councillor(player, a)
-    n = inventory(player)
+    n = if player.discard > 0 then player.discard else inventory(player) end
     if a.first == 'pass' or a.length != n
-      notify player, "Pick #{n} card#{s(n)} to keep: " +
-                     stringify(player.tmp_cards)
+      show_councillor_cards(player)
       return false
     end
     cards = []
-    a.each do |e|
-      if player.tmp_cards[e].nil?
-        notify player, 'Specify cards you were dealt.'
-        return false
+    if player.has?(:archive)
+      a.each do |e|
+        if player.cards[e].nil?
+          show_councillor_cards(player)
+          return false
+        end
+        cards << player.cards[e]
       end
-      cards << player.tmp_cards[e]
+      player.delete_cards(cards)
+      @discard |= cards
+      say "#{player} discards #{n} card#{s(n)} from hand."
+      player.discard = 0
+    else
+      a.each do |e|
+        if player.tmp_cards[e].nil?
+          notify player, 'Specify cards you were dealt.'
+          return false
+        end
+        cards << player.tmp_cards[e]
+      end
+      player.cards |= cards
+      cards.each do |e|
+        c = player.tmp_cards.dup
+        i = 0
+        i += 1 until c[i].id == e.id
+        player.tmp_cards.delete_at(i)
+      end
+      @discard |= player.tmp_cards.pop(player.tmp_cards.length)
+      say "#{player} keeps #{n} card#{s(n)}."
     end
-    player.cards |= cards
-    cards.each do |e|
-      c = player.tmp_cards.dup
-      i = 0
-      i += 1 until c[i].id == e.id
-      player.tmp_cards.delete_at(i)
-    end
-    @discard |= player.tmp_cards.pop(player.tmp_cards.length)
-    say "#{player} keeps #{n} card#{s(n)}."
     player.sort_cards
     show_cards(player)
-    tmp_string = 'Pick which cards from the councillor to keep'
+    tmp_string = 'Please look over your councillor cards'
     players.each do |p|
       next if p == player
       tmp_string << ", #{p}" unless p.moved
@@ -835,28 +850,28 @@ class SanJuan
   def do_chapel(player, a)
     if a.first == 'passes'
       say "#{player} passes."
-      return true
+    else
+      card = player.cards[a.first]
+      if a.length != 1
+        notify player, 'Specify one card in your hand to put under the Chapel.'
+        return false
+      elsif card.nil?
+        notify player, 'Specify a card in your hand.'
+        return false
+      end
+      n = 0
+      player.buildings.each do |b|
+        break if b.id == :chapel
+        n += 1
+      end
+      player.buildings[n].stash << card
+      player.delete_cards(card)
+      say "#{player} puts a card under the chapel."
     end
-    card = player.cards[a.first]
-    if a.length != 1
-      notify player, 'Specify one card in your hand to put under the Chapel.'
-      return false
-    elsif card.nil?
-      notify player, 'Specify a card in your hand.'
-      return false
-    end
-    n = 0
-    player.buildings.each do |b|
-      break if b.id == :chapel
-      n += 1
-    end
-    player.buildings[n].stash << card
-    player.delete_cards(card)
-    say "#{player} puts a card under the chapel."
-    p_string = 'Put a card under your chapel or pass'
+    tmp_string = 'Put a card under your chapel or pass'
     players.each do |p|
       next if p == player
-      p_string << ", #{p}" unless p.moved
+      tmp_string << ", #{p}" unless p.moved
       @string = p_string + '.'
     end
     return true
@@ -1192,7 +1207,6 @@ class SanJuan
       new_player = old_player
       old_player = channel.get_user(replacer.user.nick)
     end
-    say "1"
     if replacer.user == new_player
       notify replacer, "You're already playing, #{replacer.user}."
     elsif old_player == new_player
@@ -1241,6 +1255,21 @@ class SanJuan
                 "#{B}(You have no cards!)#{B}"
               end
       notify p, cards
+    end
+  end
+
+  def show_councillor_cards(p_array=players)
+    p_array = [ p_array ] unless p_array.class == Array
+    p_array.each do |p|
+      next if p.moved
+      n = if p.discard > 0 then p.discard else inventory(p) end
+      if p.has?(:archive)
+        notify p, "#{B}Discard#{B} #{n} card#{s(n)} from your " +
+                  "hand: " + stringify(p.cards, true)
+      else
+        notify p, "Pick #{n} card#{s(n)} to keep: " +
+                  stringify(p.tmp_cards, true)
+      end
     end
   end
 
@@ -1370,7 +1399,7 @@ class SanJuanPlugin < Plugin
       end
     end
     # Format and return card information.
-    unless id.nil?
+    if card
       color = SanJuan::Colors[id] || SanJuan::Colors[:violet]
       cost = if card[:cost] then " (cost: #{card[:cost]}" else '' end
       vps = if card[:vps] then "victory points: #{card[:vps]})" else '' end
