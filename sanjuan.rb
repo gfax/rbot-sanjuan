@@ -86,7 +86,6 @@ class SanJuan
       text: 'owner may discard hand cards in addition to drawn cards',
       quantity: 3
     },
-    # test this
     market_stand: {
       phase: :trader,
       cost: 2,
@@ -96,7 +95,6 @@ class SanJuan
             'when he sells at least 2 goods',
       quantity: 3
     },
-    # test this
     poor_house: {
       phase: :builder,
       cost: 2,
@@ -115,7 +113,6 @@ class SanJuan
       text: 'owner may build over one of his building (and pay the difference)',
       quantity: 3
     },
-    # test this
     black_market: {
       phase: :builder,
       cost: 2,
@@ -219,7 +216,7 @@ class SanJuan
       phase: :trader,
       cost: 4,
       vps: 2,
-      keywords: [ /market/ ],
+      keywords: [ /hall/ ],
       text: 'owner takes 1 card more for selling one good',
       quantity: 3
     },
@@ -503,6 +500,22 @@ class SanJuan
       end
     end
 
+    def goods
+      # Return array of occupied productions in
+      # order from least to greatest value goods.
+      g_array = []
+      [:indigo_plant, :sugar_mill, :coffee_roaster,
+        :tobacco_storage, :silver_smelter
+      ].each do |e|
+        n = 0
+        buildings.each do |b|
+          g_array << n if b.goods and b.id == e
+          n += 0
+        end
+      end
+      return g_array
+    end
+
     def has?(id=nil)
       return false unless id
       buildings.each { |b| return true if b.id == id }
@@ -670,8 +683,8 @@ class SanJuan
       n += 1
     end
     card = Card.new(id) if card.nil?
-    building = Building.new(card)
-    player.buildings << building
+    player.buildings << Building.new(card)
+    player.buildings << Building.new(Card.new(:well))
   end
 
   def deal_producer(player)
@@ -679,21 +692,22 @@ class SanJuan
     if n.zero?
       say "#{player} can't produce anything."
       player.moved = true
-    else
-      if n == player.open_productions
-        player.buildings.each do |b| 
-          b.goods = draw if b.production? and not b.goods
-        end
-        say "#{player} produces #{n} good#{s(n)}."
-        player.moved = true
-      else
-        notify player, "Pick #{n} good#{s(n)} to produce."
-        show_buildings(player)
+    elsif n == player.open_productions
+      player.buildings.each do |b| 
+        b.goods = draw.first if b.production? and not b.goods
       end
+      say "#{player} produces #{n} good#{s(n)}."
+      if n > 1 and player.has?(:well)
+        deal(player)
+        say "#{player} draws a card from the well."
+      end
+      player.moved = true
+    else
+      notify player, "Pick #{n} good#{s(n)} to produce."
+      show_buildings(player)
     end
     p_string = 'Pick which production buildings to produce goods for'
     players.each do |p|
-      next if p == player
       p_string << ", #{p}" unless p.moved
       @string = p_string + '.'
     end
@@ -701,8 +715,7 @@ class SanJuan
 
   def deal_prospector(player)
     if player.role == :prospector
-      n = 1
-      n += 1 if player.has?(:library)
+      n = inventory(player)
       say "#{player} draws #{n} card#{s(n)}."
       deal(player, n)
     end
@@ -724,12 +737,12 @@ class SanJuan
     else
       player.moved = true
     end
-    tmp_string = 'Pick a gold mine card to keep'
+    p_string = 'Pick a gold mine card to keep'
     players.each do |p|
       next if p == player
       unless p.moved
-        tmp_string << ", #{p}"
-        @string = tmp_string + '.'
+        p_string << ", #{p}"
+        @string = p_string + '.'
       end
     end
   end
@@ -765,15 +778,6 @@ class SanJuan
     if a.first == 'pass'
       say "#{player} passes."
     else
-      cost = player.cards[a.first].cost
-      cost -= 1 if player.role == :builder
-      cost -= 1 if player.has?(:smithy) and player.cards[a.first].production?
-      cost -= 1 if player.has?(:quarry) and player.cards[a.first].violet?
-      cost = 0 if cost < 0
-      if cost > a.length - 1
-        notify player, "Pick #{cost} card#{s(cost)} to discard to build that."
-        return false
-      end
       cards = []
       a.each do |e|
         if e < 0 or player.cards[e].nil?
@@ -782,20 +786,43 @@ class SanJuan
         end
         cards << player.cards[e].dup
       end
+      cost = player.cards[a.first].cost
+      cost -= 1 if player.role == :builder
+      cost -= 1 if player.has?(:smithy) and player.cards[a.first].production?
+      cost -= 1 if player.has?(:quarry) and player.cards[a.first].violet?
+      cost = 0 if cost < 0
+      deficit = cost - (a.length - 1)
+      open_market = deficit <= player.occupied_productions
+      if player.has?(:black_market) and open_market and deficit.between?(1,2)
+        player.goods[0..deficit-1].each do |e|
+          @discard << player.buildings[e].goods
+          player.buildings[e].goods = nil
+          cost -= 1
+        end
+        say "#{player} uses the black market to " +
+            "trade #{deficit} good#{s(deficit)}."
+      elsif deficit > 0
+        notify player, "Pick #{cost} card#{s(cost)} to discard to build that."
+        return false
+      end
       player.buildings << Building.new(cards.first)
       say "#{player} builds #{cards.first}."
       player.delete_cards(cards[0..cost])
       @discard |= cards[1..cost]
+      if player.cards.length < 2 and player.has?(:poor_house)
+        deal(player)
+        say "#{player} draws a card from the poor house."
+      end
+      players.each { |p| max_hand_check(p) }
       show_buildings(player)
       show_cards(player)
-      player.max_cards = 12 if player.has?(:tower)
     end
-    tmp_string = 'Build or pass'  
+    p_string = 'Build or pass'  
     players.each do |p|
       next if p == player
-      tmp_string << ", #{p}" unless p.moved
+      p_string << ", #{p}" unless p.moved
     end
-    @string = tmp_string + '.'
+    @string = p_string + '.'
     return true
   end
 
@@ -816,7 +843,7 @@ class SanJuan
       end
       player.delete_cards(cards)
       @discard |= cards
-      say "#{player} discards #{n} card#{s(n)} from hand."
+      say "#{player} discards #{n} hand card#{s(n)}."
       player.discard = 0
     else
       a.each do |e|
@@ -838,12 +865,12 @@ class SanJuan
     end
     player.sort_cards
     show_cards(player)
-    tmp_string = 'Please look over your councillor cards'
+    p_string = 'Please look over your councillor cards'
     players.each do |p|
       next if p == player
-      tmp_string << ", #{p}" unless p.moved
+      p_string << ", #{p}" unless p.moved
     end
-    @string = tmp_string + '.'
+    @string = p_string + '.'
     return true
   end
 
@@ -868,10 +895,10 @@ class SanJuan
       player.delete_cards(card)
       say "#{player} puts a card under the chapel."
     end
-    tmp_string = 'Put a card under your chapel or pass'
+    p_string = 'Put a card under your chapel or pass'
     players.each do |p|
       next if p == player
-      tmp_string << ", #{p}" unless p.moved
+      p_string << ", #{p}" unless p.moved
       @string = p_string + '.'
     end
     return true
@@ -892,9 +919,13 @@ class SanJuan
         return false
       end
     end
-    a.each { |e| player.buildings[e].goods = draw }
+    a.each { |e| player.buildings[e].goods = draw.first }
     say "#{player} produces #{n} good#{s(n)}."
-    p_string = 'Pick which production buildings to produce goods for'
+    if n > 1 and player.has?(:well)
+      deal(player)
+      say "#{player} draws a card from the well."
+    end
+    p_string = 'Pick which production building(s) to produce goods for'
     players.each do |p|
       next if p == player
       p_string << ", #{p}" unless p.moved
@@ -922,7 +953,6 @@ class SanJuan
       @string << ' Pick which cards to keep.'
       players.each { |p| deal_councillor(p) }
     when :producer
-      @string << ' Pick which production buildings to produce goods for.'
       players.each { |p| deal_producer(p) }
     when :prospector
       players.each { |p| deal_prospector(p) }
@@ -943,12 +973,12 @@ class SanJuan
     show_cards(player)
     say "#{player} keeps a card from the gold mine."
     @discard |= player.tmp_cards.pop(player.tmp_cards.length)
-    tmp_string = 'Pick a gold mine card to keep'
+    p_string = 'Pick a gold mine card to keep'
     players.each do |p|
       next if p == player
-      tmp_string << ", #{p}" unless p.moved
+      p_string << ", #{p}" unless p.moved
     end
-    @string = tmp_string + '.'
+    @string = p_string + '.'
     return true
   end
 
@@ -979,6 +1009,10 @@ class SanJuan
     end
     deal(player, n)
     say "#{player} trades #{a.length} good#{s(a.length)}."
+    if a.length > 1 and player.has?(:market_stand)
+      deal(player)
+      say "#{player} draws a card from the market stand."
+    end
     p_string = 'Select which goods to trade in'
     players.each do |p|
       next if p == player
@@ -1131,6 +1165,10 @@ class SanJuan
       n += 1 if player.has?(:aqueduct)
       n += 1 if player.role == :producer and player.has?(:library)
       n = p if n > p
+    when :prospector
+      # Number of cards to draw.
+      n = 1 if player.role == :prospector
+      n += 1 if player.has?(:library)
     when :trader
       # Number of tradable goods.
       p = player.occupied_productions
@@ -1229,6 +1267,17 @@ class SanJuan
     return 's'
   end
 
+  def max_hand_check(player)
+    player.max_cards = if player.has?(:tower)
+                         12
+                       else
+                         7
+                       end
+    unless player.has?(:guard_room)
+      players.each { |p| player.max_cards = 6 if p.has?(:guard_room) }
+    end
+  end
+
   def say(msg, who=channel, opts={})
     @bot.say who, msg, opts
   end
@@ -1311,7 +1360,6 @@ class SanJuan
       players.each { |p| p.discard = deal(p, n); n+= 1 }
       @players = [ @players.pop ] + players
     end
-    show_cards
     change_governor
   end
 
@@ -1409,7 +1457,7 @@ class SanJuanPlugin < Plugin
               when :end then 'At game end: '
               else card[:phase].to_s.capitalize + ' phase: '
               end
-      return Bold + color + id.to_s.capitalize + NormalText +
+      return Bold + color + id.to_s.gsub('_',' ').capitalize + NormalText +
              cost + ' / ' + vps + " - " + phase + card[:text]
     end
     # Check other help topics for information.
