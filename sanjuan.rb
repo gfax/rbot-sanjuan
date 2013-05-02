@@ -22,7 +22,7 @@ class SanJuan
            }
   Cards = {
     # Call these production to distinguish them
-    # from the other producer producer-phase cards.
+    # from the other producer-phase cards.
     indigo_plant: {
       cost: 1,
       phase: :production,
@@ -106,7 +106,6 @@ class SanJuan
             'he has only 0 or 1 card after building',
       quantity: 3
     },
-    # test this
     crane: {
       phase: :builder,
       cost: 2,
@@ -133,7 +132,6 @@ class SanJuan
             'when he produces at least 2 goods',
       quantity: 3
     },
-    # test this
     trading_post: {
       phase: :trader,
       cost: 2,
@@ -150,7 +148,6 @@ class SanJuan
       text: 'owner may have up to 12 cards in his hand',
       quantity: 3
     },
-    # test this
     carpenter: {
       phase: :builder,
       cost: 3,
@@ -160,7 +157,6 @@ class SanJuan
             'after he builds a violet building',
       quantity: 3
     },
-    # test this
     statue: {
       phase: :monument,
       cost: 3,
@@ -169,7 +165,6 @@ class SanJuan
       text: 'no special function',
       quantity: 3
     },
-    # test this
     prefecture: {
       phase: :councillor,
       cost: 3,
@@ -228,7 +223,6 @@ class SanJuan
       text: 'no special function',
       quantity: 3
     },
-    # test this
     library: {
       phase: :all,
       cost: 5,
@@ -300,7 +294,8 @@ class SanJuan
       vps: 1,
       keywords: [ /caritas/ ],
       text: 'owner takes 1 card from the supply if he has the fewest ' +
-            'buildings (does not take affect until the following phase)',
+            'buildings (does not take affect until the following phase). ' +
+            'note: owner does no need to build for it to take affect',
       quantity: 3
     },
     customs_office: {
@@ -313,7 +308,6 @@ class SanJuan
             ' Trader phase: good brings in 2 cards with the sale',
       quantity: 3
     },
-    # test this
     park: {
       expansion: true,
       phase: :builder,
@@ -343,10 +337,10 @@ class SanJuan
       vps: 2,
       keywords: [ /bank/ ],
       text: 'owner may put as many cards from his hand cards ' +
-            'under his bank (each scores 1 VP at game end)',
+            'under his bank (each scores 1 VP at game end). ' +
+            'note: this card can only be used once per game',
       quantity: 3
     },
-    # test this
     goldsmith: {
       expansion: true,
       phase: :prospector,
@@ -395,9 +389,13 @@ class SanJuan
     def initialize(card)
       @card = card
       @goods = nil # a card from stock will go here to represent produce
-      @stash = [] # cards stashed under cathedral or bank for end-game vps
+      @stash = []  # cards stashed under cathedral or bank for end-game vps
     end
-    
+
+    def cost
+      card.cost
+    end
+
     def id
       card.id
     end
@@ -414,18 +412,25 @@ class SanJuan
       card.violet?
     end
 
+    def vps
+      vps = card.vps
+      vps += stash.size
+    end
+
     def to_s
-      color = Colors[card.id] || Colors[:violet]
-      s = ''
-      if stash.length > 0
-        s << '('
-        stash.length.times { s << '|' }
-        s << ')'
-      end
+      color = Colors[id] || Colors[:violet]
       g = if goods then '(*)' else '' end
-      i = card.id.to_s.gsub('_',' ').capitalize
+      i = id.to_s.gsub('_',' ').capitalize
+      v = ' ' + vps.to_s
+      B + color + g + i + v + NormalText
+    end
+  
+    def to_ss
+      color = Colors[id] || Colors[:violet]
+      g = if goods then '(*)' else '' end
+      i = id.to_s.gsub('_',' ').capitalize
       v = ' ' + card.vps.to_s
-      B + color + s + g + i + v + NormalText
+      B + color + g + i + v + NormalText
     end
   
   end
@@ -481,7 +486,6 @@ class SanJuan
       @user = user
       @buildings = []
       @cards = []
-      @crane_building = nil # building to build over
       @discard = 0    # number of cards to discard
       @max_cards = 7  # dynamic hand card size limit
       @moved = true   # false until played or passed
@@ -695,7 +699,7 @@ class SanJuan
     end
     card = Card.new(id) if card.nil?
     player.buildings << Building.new(card)
-    player.buildings << Building.new(Card.new(:well))
+    player.buildings << Building.new(Card.new(:chapel))
   end
 
   def deal_producer(player)
@@ -727,6 +731,22 @@ class SanJuan
       say "#{player} draws #{n} card#{s(n)}."
       deal(player, n)
     end
+    if player.has?(:goldsmith)
+      gold = draw.first
+      p_string = "#{player} draws a goldsmith card..."
+      p_array = []
+      players.each { |p| p_array << p if p.has?(gold.id) }
+      if p_array.empty?
+        say p_string + 'and keeps the card since no one has built it.'
+        player.cards << gold
+        show_cards(player)
+      else
+        p_string << 'no good! -- ' + gold.to_s
+        p_string << " has already been built by #{p_array.join(' and ')}."
+        say p_string
+        @discard << gold
+      end
+      end
     if player.has?(:gold_mine)
       player.tmp_cards = draw(4)
       p_string =  "#{player} draws 4 gold mine cards... "
@@ -778,7 +798,7 @@ class SanJuan
     if a.first == 'pass'
       say "#{player} passes."
     else
-      cost = 0
+      cost = inventory(player)
       crane = nil
       if a.first =~ /^b/
         if player.has?(:crane)
@@ -789,6 +809,7 @@ class SanJuan
             return false
           end
           cost -= player.buildings[crane].cost
+          cost -= 3 if player.buildings[crane].id == :park
         end
         a.delete_at(0)
       end
@@ -801,8 +822,6 @@ class SanJuan
         cards << player.cards[e].dup
       end
       cost += player.cards[a.first].cost
-      cost -= 1 if player.role == :builder
-      cost -= 1 if player.role == :builder and player.has?(:library)
       cost -= 1 if player.has?(:smithy) and player.cards[a.first].production?
       cost -= 1 if player.has?(:quarry) and player.cards[a.first].violet?
       cost = 0 if cost < 0
@@ -821,6 +840,8 @@ class SanJuan
         return false
       end
       if crane
+        say "#{player} builds over #{player.buildings[crane].card} " +
+            "using the crane."
         @discard << player.buildings[crane].card
         player.buildings[crane].card = cards.first
         if player.buildings[crane].goods
@@ -837,10 +858,16 @@ class SanJuan
       say "#{player} builds #{cards.first}."
       player.delete_cards(cards[0..cost])
       @discard |= cards[1..cost]
+      bonus_string = ''
       if player.cards.length < 2 and player.has?(:poor_house)
         deal(player)
-        say "#{player} draws a card using the poor house."
+        bonus_string << "#{player} draws a card using the poor house. "
       end
+      if player.has?(:carpenter) and cards.first.violet?
+        deal(player)
+        bonus_string << "#{player} draws a card using the carpenter. "
+      end
+      say bonus_string
       players.each { |p| max_hand_check(p) }
       show_buildings(player)
       show_cards(player)
@@ -903,7 +930,7 @@ class SanJuan
   end
 
   def do_chapel(player, a)
-    if a.first == 'passes'
+    if a.first == 'pass'
       say "#{player} passes."
     else
       card = player.cards[a.first]
@@ -1038,7 +1065,7 @@ class SanJuan
     end
     deal(player, n)
     say "#{player} trades #{a.length} good#{s(a.length)}."
-    if a.length > 1 player.has?(:market_stand)
+    if a.length > 1 and player.has?(:market_stand)
       deal(player)
       say "#{player} draws a card using the market stand."
     end
@@ -1186,6 +1213,10 @@ class SanJuan
   def inventory(player, role=phase)
     n = 0
     case role
+    when :builder
+      # Base build cost.
+      n -= 1 if player.role == :builder
+      n -= 1 if player.role == :builder and player.has?(:library)
     when :councillor
       # Number of keepable cards.
       n = 1
@@ -1207,7 +1238,7 @@ class SanJuan
       p = player.occupied_productions
       return n if p < 1
       n = if player.role == :trader then 2 else 1 end
-      n += 1 if player.has?(:trading_post)
+      n += 2 if player.has?(:trading_post)
       n += 1 if player.role == :trader and player.has?(:library)
       n = p if n > p
     end
@@ -1247,9 +1278,10 @@ class SanJuan
   def processor(player, a)
     return if player.moved or a.length.zero?
     return unless a.first =~ /^(b?[0-9]+|pass)$/
+    return if a.first =~ /^b/ and phase != :builder
     player.moved = true
     old_phase = phase
-    a.map! { |e| e == 'pass' ? e : e.to_i - 1 }
+    a.map! { |e| e =~ /^(b|pass)/ ? e : e.to_i - 1 }
     player.moved = self.send("do_#{phase}", player, a)
     if done?
       do_turn
@@ -1312,6 +1344,7 @@ class SanJuan
   end
 
   def say(msg, who=channel, opts={})
+    return if msg.empty?
     @bot.say who, msg, opts
   end
 
@@ -1441,10 +1474,16 @@ class SanJuanPlugin < Plugin
     :default => 45, :validate => Proc.new{|v| v > 0},
     :desc => 'Number of seconds before starting a game of San Juan.'
 
-  Config.register Config::BooleanValue.new 'sanjuan.start_handicap',
+  Config.register Config::BooleanValue.new 'sanjuan.hide_stashes',
     :default => false,
-    :desc => 'Deal +1 card for every player after the first player. ' +
-             '(See Variant section of the manual for more information.)'
+    :desc => 'Don\'t allow players to see how many cards are ' +
+             'under other players\' Banks, Chapels or Harbors.'
+
+  Config.register Config::BooleanValue.new 'sanjuan.events',
+    :default => false,
+    :desc => 'Include events from the Treasure Chest: ' +
+             'Free build, Governor visit, Taxes, ' +
+             'Debt relief, Earthquake, General amnesty'
 
   Config.register Config::BooleanValue.new 'sanjuan.expansion',
     :default => false,
@@ -1452,11 +1491,10 @@ class SanJuanPlugin < Plugin
              'Office building, Caritas, Customs office, ' +
              'Park, Harbor, Bank, Goldsmith, Residence, Cathedral'
 
-  Config.register Config::BooleanValue.new 'sanjuan.events',
+  Config.register Config::BooleanValue.new 'sanjuan.start_handicap',
     :default => false,
-    :desc => 'Include events from the Treasure Chest: ' +
-             'Free build, Governor visit, Taxes, ' +
-             'Debt relief, Earthquake, General amnesty'
+    :desc => 'Deal +1 card for every player after the first player. ' +
+             '(See Variant section of the manual for more information.)'
 
 
   attr :games
