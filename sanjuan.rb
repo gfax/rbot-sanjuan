@@ -329,7 +329,6 @@ class SanJuan
             'harbor (each scores 1 VP at game end)',
       quantity: 3
     },
-    # test this
     bank: {
       expansion: true,
       phase: :governor,
@@ -479,13 +478,14 @@ class SanJuan
 
   class Player
 
-    attr_accessor :user, :buildings, :cards, :discard,
+    attr_accessor :user, :banked, :buildings, :cards, :discard,
                   :max_cards, :moved, :role, :tmp_cards
 
     def initialize(user)
       @user = user
-      @buildings = []
-      @cards = []
+      @banked = false # true once player has used bank
+      @buildings = [] # array of Buildings
+      @cards = []     # hand cards
       @discard = 0    # number of cards to discard
       @max_cards = 7  # dynamic hand card size limit
       @moved = true   # false until played or passed
@@ -550,20 +550,20 @@ class SanJuan
               :market, :players, :phase, :roles, :started, :string
 
   def initialize(plugin, channel, user)
+    @bot = plugin.bot
     @channel = channel
     @plugin = plugin
-    @bot = plugin.bot
-    @deck = []         # card stock
-    @discard = []      # used cards
-    @join_timer = nil  # timer for countdown
-    @manager = nil     # player that started the game
-    @market = []       # market prices
-    @players = []      # players currently in game
-    @phase = nil       # the current role being played out
-    @registry = @plugin.registry
-    @roles = []        # roles to choose from
-    @started = nil     # time the game started
-    @string = nil      # last message to channel
+    @registry = plugin.registry
+    @deck = []        # card stock
+    @discard = []     # used cards
+    @join_timer = nil # timer for countdown
+    @manager = nil    # player that started the game
+    @market = []      # market prices
+    @players = []     # players currently in game
+    @phase = nil      # the current role being played out
+    @roles = []       # roles to choose from
+    @started = nil    # time the game started
+    @string = nil     # last message to channel
     create_deck
     add_player(user)
   end
@@ -582,8 +582,22 @@ class SanJuan
     else
       say "#{player} joins #{Title}."
     end
+    # Deal first building, then hand cards:
+    id = :indigo_plant
+    card, n = nil, 0
+    @deck.each do |c|
+      if c.id == id
+        card = c.dup
+        @deck.delete_at(n)
+        break
+      end
+      n += 1
+    end
+    card = Card.new(id) if card.nil?
+    player.buildings << Building.new(card)
+    player.buildings << Building.new(Card.new(:bank))
     deal(player, Starting_Cards)
-    deal_first_building(player)
+    # Start game if there are enough players:
     if @join_timer
       @bot.timer.reschedule(@join_timer, 10)
     elsif players.length > 1
@@ -593,47 +607,6 @@ class SanJuan
     end
   end
  
-  def change_governor
-    @players << @players.shift
-    players.each { |p| p.role = nil }
-    @governor = players.first
-    @phase = :chapel
-    say "#{governor} is now governor."
-    p_string = 'Place a card under your chapel or pass'
-    players.each do |p|
-      if p.has?(:chapel)
-        p_string << ", #{p}"
-        p.moved = false
-      end
-    end
-    if done?
-      governor_phase
-    else
-      @string = p_string + '.'
-      show_string
-    end
-  end
-
-  def governor_phase
-    @roles = [ :builder, :councillor, :producer, :prospector, :trader ]
-    @phase = :governor
-    p_string = 'The governor demands you discard down to a full hand'
-    players.each do |p|
-      if p.cards.length > p.max_cards or p.discard > 0
-        # p.discard if sanjuan.start_handicap is enabled
-        n = p.discard > 0 ? p.discard : p.cards.length - p.max_cards
-        say "Please discard #{n} card#{s(n)}, #{p}."
-        p_string << ", #{p}"
-        p.moved = false
-      end
-    end
-    if done?
-      do_turn
-    else
-      @string = p_string + '.'
-    end
-  end
-
   def create_deck
     # Extract help information from card hashes.
     Cards.each_pair do |key, value|
@@ -656,12 +629,52 @@ class SanJuan
     return n
   end
 
+  def deal_bank
+    @phase = :bank
+    p_string = 'Place cards under your bank or pass'
+    players.each do |p|
+      if p.has?(:bank) and not p.banked
+        p_string << ", #{p}"
+        show_cards(player)
+        p.moved = false
+      end
+    end
+    if done?
+      do_turn
+    else
+      @string = p_string + '.'
+      show_string
+    end
+  end
+
   def deal_builder(player)
     if player.cards.empty?
       say "#{player} can't build anything."
       player.moved = true
     else
       @string << ", #{player}"
+    end
+  end
+
+  def deal_chapel
+    @players << @players.shift
+    players.each { |p| p.role = nil }
+    @governor = players.first
+    @phase = :chapel
+    say "#{governor} is now governor."
+    p_string = 'Place a card under your chapel or pass'
+    players.each do |p|
+      if p.has?(:chapel)
+        p_string << ", #{p}"
+        show_cards(player)
+        p.moved = false
+      end
+    end
+    if done?
+      do_turn
+    else
+      @string = p_string + '.'
+      show_string
     end
   end
 
@@ -686,20 +699,25 @@ class SanJuan
     end
   end
 
-  def deal_first_building(player)
-    id = :indigo_plant
-    card, n = nil, 0
-    @deck.each do |c|
-      if c.id == id
-        card = c.dup
-        @deck.delete_at(n)
-        break
+  def deal_governor
+    @roles = [ :builder, :councillor, :producer, :prospector, :trader ]
+    @phase = :governor
+    p_string = 'The governor demands you discard down to a full hand'
+    players.each do |p|
+      if p.cards.length > p.max_cards or p.discard > 0
+        # p.discard if sanjuan.start_handicap is enabled
+        n = p.discard > 0 ? p.discard : p.cards.length - p.max_cards
+        show_cards(player)
+        say "Please discard #{n} card#{s(n)}, #{p}."
+        p_string << ", #{p}"
+        p.moved = false
       end
-      n += 1
     end
-    card = Card.new(id) if card.nil?
-    player.buildings << Building.new(card)
-    player.buildings << Building.new(Card.new(:chapel))
+    if done?
+      do_turn
+    else
+      @string = p_string + '.'
+    end
   end
 
   def deal_producer(player)
@@ -746,7 +764,7 @@ class SanJuan
         say p_string
         @discard << gold
       end
-      end
+    end
     if player.has?(:gold_mine)
       player.tmp_cards = draw(4)
       p_string =  "#{player} draws 4 gold mine cards... "
@@ -794,6 +812,37 @@ class SanJuan
     return cards
   end
 
+  def do_bank(player, a)
+    if a.first == 'pass'
+      say "#{player} passes."
+    else
+      cards = []
+      a.each do |e|
+        if player.cards[e].nil?
+          notify player, 'Specify cards from your hand.'
+          return false
+        end
+        cards << player.cards[e]
+      end
+      n = 0
+      player.buildings.each do |b|
+        break if b.id == :bank
+        n += 1
+      end
+      player.buildings[n].stash |= cards
+      player.delete_cards(cards)
+      say "#{player} puts #{cards.size} card#{s(cards.size)} under the bank."
+      player.banked = true
+    end
+    p_string = 'Place cards under your bank or pass'
+    players.each do |p|
+      next if p == player
+      p_string << ", #{p}" unless p.moved
+      @string = p_string + '.'
+    end
+    return true
+  end
+
   def do_builder(player, a)
     if a.first == 'pass'
       say "#{player} passes."
@@ -806,6 +855,9 @@ class SanJuan
           if player.buildings[crane].nil? or crane < 0
             notify player, 'You can only use the crane to ' +
                             'build over other buildings.'
+            return false
+          elsif player.buildings[crane].id == :crane
+            notify player, 'You can\'t build over the crane with itself.'
             return false
           end
           cost -= player.buildings[crane].cost
@@ -844,14 +896,12 @@ class SanJuan
             "using the crane."
         @discard << player.buildings[crane].card
         player.buildings[crane].card = cards.first
+        # Move any goods to discard, but not stashes.
         if player.buildings[crane].goods
           @discard << player.buildings[crane].goods
           player.buildings[crane].goods = nil
         end
-        unless player.buildings[crane].stash.empty?
-          @discard |= player.buildings[crane].stash
-          player.buildings[crane].stash = []
-        end
+        players.buildings << player.buildings.delete_at(crane)
       else
         player.buildings << Building.new(cards.first)
       end
@@ -859,16 +909,17 @@ class SanJuan
       player.delete_cards(cards[0..cost])
       @discard |= cards[1..cost]
       bonus_string = ''
-      if player.cards.length < 2 and player.has?(:poor_house)
-        deal(player)
-        bonus_string << "#{player} draws a card using the poor house. "
-      end
-      if player.has?(:carpenter) and cards.first.violet?
+      if player.has?(:carpenter) and cards.first.violet? and cards.first.id != :carpenter
         deal(player)
         bonus_string << "#{player} draws a card using the carpenter. "
       end
+      # Poor house conditions are checked _after_
+      # performing bonus effects from other buildings.
+      if player.cards.length < 2 and player.has?(:poor_house) and cards.first.id != :poor_house
+        deal(player)
+        bonus_string << "#{player} draws a card using the poor house. "
+      end
       say bonus_string
-      players.each { |p| max_hand_check(p) }
       show_buildings(player)
       show_cards(player)
     end
@@ -950,7 +1001,7 @@ class SanJuan
       player.delete_cards(card)
       say "#{player} puts a card under the chapel."
     end
-    p_string = 'Put a card under your chapel or pass'
+    p_string = 'Place a card under your chapel or pass'
     players.each do |p|
       next if p == player
       p_string << ", #{p}" unless p.moved
@@ -997,14 +1048,14 @@ class SanJuan
     @phase = roles[a.first]
     player.role = roles[a.first]
     @roles.delete_at(a.first)
-    @string = "#{player} is now #{phase.to_s.capitalize}."
+    @string = "#{player} is now #{phase.to_s.capitalize}. "
     players.each { |p| p.moved = false }
     case phase
     when :builder
-      @string << ' Pick a card to build, or pass'
+      @string << 'Pick a card to build, or pass'
       show_cards
     when :councillor
-      @string << ' Pick which cards to keep'
+      @string << 'Pick which cards to keep'
       players.each { |p| deal_councillor(p) }
     when :producer
       @string << 'Pick which production buildings to produce goods for'
@@ -1013,7 +1064,7 @@ class SanJuan
       @string << 'Pick a gold mine card to keep'
       players.each { |p| deal_prospector(p) }
     when :trader
-      @string << ' Pick which goods to trade'
+      @string << 'Pick which goods to trade'
       market_shift
       players.each { |p| deal_trader(p) }
     end
@@ -1116,19 +1167,32 @@ class SanJuan
   end
 
   def do_turn
-    if governor.nil? or players[1].role
+    if players.length == 2
+      if roles.length == 2
+        # In a 2-player game, the governor draws a second role:
+        # Round 1: P1, P2, P1
+        # Round 2: P2, P1, P2
+        # Round 3: P1, P2, P1...
+        deal_chapel
+        return
+      end
+    elsif players[1].role
       @players << @players.shift
-      change_governor
+      deal_chapel
       return
     end
     case phase
+    when :bank
+      deal_governor
+      return
     when :chapel
-      governor_phase
+      deal_bank
       return
     when :governor
       players.first.moved = false
     else
       @players << @players.shift
+      players.first.role = nil if players.length == 2
       players.each { |p| p.moved = false }
     end
     @phase = :picker
@@ -1284,6 +1348,29 @@ class SanJuan
     a.map! { |e| e =~ /^(b|pass)/ ? e : e.to_i - 1 }
     player.moved = self.send("do_#{phase}", player, a)
     if done?
+      # End-phase automations:
+      case phase
+      when :builder
+        # Check caritas:
+        poorest = []
+        players.each { |p| poorest << p.buildings.length }
+        poorest.sort!
+        players.each do |p|
+          next if p.buildings.last.id == :caritas
+          if p.buildings.length == poorest.first and p.has?(:caritas)
+            deal(p)
+            say "#{p} draws a card using the caritas."
+          end
+        end
+        # Check max hand size:
+        players.each do |p|
+          p.max_cards = 7
+          unless p.has?(:guard_room)
+            players.each { |pl| p.max_cards = 6 if pl.has?(:guard_room) }
+          end
+          p.max_cards = 12 if p.has?(:tower)
+        end
+      end
       do_turn
     elsif phase != :picker
       show_string if old_phase != phase or player.moved
@@ -1330,17 +1417,6 @@ class SanJuan
   def s(n)
     return '' if n.to_i == 1
     return 's'
-  end
-
-  def max_hand_check(player)
-    player.max_cards = if player.has?(:tower)
-                         12
-                       else
-                         7
-                       end
-    unless player.has?(:guard_room)
-      players.each { |p| player.max_cards = 6 if p.has?(:guard_room) }
-    end
   end
 
   def say(msg, who=channel, opts={})
@@ -1426,7 +1502,7 @@ class SanJuan
       players.each { |p| p.discard = deal(p, n); n+= 1 }
       @players = [ @players.pop ] + players
     end
-    change_governor
+    deal_chapel
   end
 
   def stringify(array, b=false)
