@@ -231,6 +231,7 @@ class SanJuan
       text: 'owner uses the privilege of his role twice',
       quantity: 3
     },
+    # End-game cards:
     # test this
     triumphal_arch: {
       phase: :end,
@@ -266,6 +267,7 @@ class SanJuan
       text: 'owner earns 1 additional victory point for every 4 victory points',
       quantity: 2
     },
+    # Expansion Cards:
     # test this
     office_building: {
       expansion: true,
@@ -286,7 +288,6 @@ class SanJuan
       text: 'players without Guard room reduce their hand to 6 cards',
       quantity: 3
     },
-    # test this
     caritas: {
       expansion: true,
       phase: :builder,
@@ -367,17 +368,46 @@ class SanJuan
       keywords: [ /cathedral/ ],
       text: 'owner scores 4-3-2-1-0 VPs for each opponents\' 6 buildings',
       quantity: 1
+    },
+    # Events:
+    free_build: {
+      expansion: true,
+      phase: :event,
+      keywords: [ /free?buil/ ],
+      text: 'each player may build a building with ' +
+            'building costs of up to 4 free of charge',
+    },
+    governor_visit: {
+      expansion: true,
+      phase: :event,
+      keywords: [ /visit/ ],
+      text: 'an already used role may be used again',
+    },
+    taxes: {
+      expansion: true,
+      phase: :event,
+      keywords: [ /tax(es|ing)/ ],
+      text: 'each other player must discard 1 card from his hand',
+    },
+    debt_relief: { 
+      expansion: true,
+      phase: :event,
+      keywords: [ /debt/, /relief/ ],
+      text: 'each player draws 3 cards from the supply',
+    },
+    earthquake: {
+      expansion: true,
+      phase: :event,
+      keywords: [ /earth/, /quake/ ],
+      text: 'each player must destroy any 1 of his buildings',
+    },
+    general_amnesty: {
+      expansion: true,
+      phase: :event,
+      keywords: [ /general/, /amnest/ ],
+      text: 'each player may exchange any number of ' +
+            'cards from his hand with the supply'
     }
-  }
-  Events = {
-    free_build: 'each player may build a building with ' +
-                'building costs of up to 4 free of charge',
-    governor_visit: 'an already used role may be used again',
-    taxes: 'each other player must discard 1 card from his hand',
-    debt_relief: 'each player draws 3 cards from the supply',
-    earthquake: 'each player must destroy any 1 of his buildings',
-    general_amnesty: 'each player may exchange any number of ' +
-                     'cards from his hand with the supply'
   }
 
 
@@ -461,7 +491,7 @@ class SanJuan
     end
 
     def to_s
-      color = Colors[id] || Colors[:violet]
+      color = Colors[id] || Colors[phase] || Colors[:violet]
       i = id.to_s.gsub('_',' ').capitalize
       c = if cost.zero? then ''
           else ' ' +  Colors[:cost] + cost.to_s
@@ -612,6 +642,7 @@ class SanJuan
   def create_deck
     # Extract help information from card hashes.
     Cards.each_pair do |key, value|
+      next if value[:phase] == :event and not @bot.config['sanjuan.events']
       next if value[:expansion] and not @bot.config['sanjuan.expansion']
       # Add an extra production card of each kind if using the expansion deck.
       x = (@bot.config['sanjuan.expansion'] and value[:phase] == :production)     
@@ -1434,9 +1465,13 @@ class SanJuan
   def show_buildings(player=players, a=[])
     p_array = get_player(a.first) || player
     p_array = [ p_array ] unless p_array.class == Array
-    if get_player(a.first)
-      say "#{p_array.first}'s buildings: " + 
-          stringify(p_array.first.buildings)
+    if player = get_player(a.first)
+      if @bot.config['sanjuan.hide_stashes']
+        b_string = stringify(player.buildings.map { |x| x.to_ss })
+      else
+        b_string = stringify(player.buildings)
+      end
+      say "#{p_array.first}'s buildings: " + b_string
     else
       p_array.each do |p|
         notify p, 'Buildings: ' + stringify(p.buildings, true)
@@ -1566,7 +1601,8 @@ class SanJuanPlugin < Plugin
     :default => false,
     :desc => 'Include events from the Treasure Chest: ' +
              'Free build, Governor visit, Taxes, ' +
-             'Debt relief, Earthquake, General amnesty'
+             'Debt relief, Earthquake, General amnesty ' +
+             '(Must enable sanjuan.expansion as well.)'
 
   Config.register Config::BooleanValue.new 'sanjuan.expansion',
     :default => false,
