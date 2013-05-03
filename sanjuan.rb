@@ -478,7 +478,7 @@ class SanJuan
 
   class Player
 
-    attr_accessor :user, :banked, :buildings, :cards, :discard,
+    attr_accessor :user, :banked, :buildings, :built, :cards, :discard,
                   :max_cards, :moved, :role, :tmp_cards
 
     def initialize(user)
@@ -487,6 +487,7 @@ class SanJuan
       @buildings = [] # array of Buildings
       @cards = []     # hand cards
       @discard = 0    # number of cards to discard
+      @built = false  # building id when built
       @max_cards = 7  # dynamic hand card size limit
       @moved = true   # false until played or passed
       @tmp_cards = [] # used for councillor, goldmine, etc.
@@ -596,6 +597,7 @@ class SanJuan
     card = Card.new(id) if card.nil?
     player.buildings << Building.new(card)
     player.buildings << Building.new(Card.new(:bank))
+    player.buildings << Building.new(Card.new(:caritas))
     deal(player, Starting_Cards)
     # Start game if there are enough players:
     if @join_timer
@@ -635,7 +637,7 @@ class SanJuan
     players.each do |p|
       if p.has?(:bank) and not p.banked
         p_string << ", #{p}"
-        show_cards(player)
+        show_cards(p)
         p.moved = false
       end
     end
@@ -658,15 +660,16 @@ class SanJuan
 
   def deal_chapel
     @players << @players.shift
+    @roles = [ :builder, :councillor, :producer, :prospector, :trader ]
+    @phase = :chapel
     players.each { |p| p.role = nil }
     @governor = players.first
-    @phase = :chapel
     say "#{governor} is now governor."
     p_string = 'Place a card under your chapel or pass'
     players.each do |p|
       if p.has?(:chapel)
         p_string << ", #{p}"
-        show_cards(player)
+        show_cards(p)
         p.moved = false
       end
     end
@@ -700,14 +703,13 @@ class SanJuan
   end
 
   def deal_governor
-    @roles = [ :builder, :councillor, :producer, :prospector, :trader ]
     @phase = :governor
     p_string = 'The governor demands you discard down to a full hand'
     players.each do |p|
       if p.cards.length > p.max_cards or p.discard > 0
         # p.discard if sanjuan.start_handicap is enabled
         n = p.discard > 0 ? p.discard : p.cards.length - p.max_cards
-        show_cards(player)
+        show_cards(p)
         say "Please discard #{n} card#{s(n)}, #{p}."
         p_string << ", #{p}"
         p.moved = false
@@ -845,6 +847,7 @@ class SanJuan
 
   def do_builder(player, a)
     if a.first == 'pass'
+      player.built = false
       say "#{player} passes."
     else
       cost = inventory(player)
@@ -901,23 +904,27 @@ class SanJuan
           @discard << player.buildings[crane].goods
           player.buildings[crane].goods = nil
         end
-        players.buildings << player.buildings.delete_at(crane)
       else
         player.buildings << Building.new(cards.first)
       end
+      player.built = cards.first.id
       say "#{player} builds #{cards.first}."
       player.delete_cards(cards[0..cost])
       @discard |= cards[1..cost]
       bonus_string = ''
-      if player.has?(:carpenter) and cards.first.violet? and cards.first.id != :carpenter
-        deal(player)
-        bonus_string << "#{player} draws a card using the carpenter. "
+      if player.has?(:carpenter) and cards.first.violet?
+        unless player.built == :carpenter
+          deal(player)
+          bonus_string << "#{player} draws a card using the carpenter. "
+        end
       end
-      # Poor house conditions are checked _after_
-      # performing bonus effects from other buildings.
-      if player.cards.length < 2 and player.has?(:poor_house) and cards.first.id != :poor_house
-        deal(player)
-        bonus_string << "#{player} draws a card using the poor house. "
+      # Poor house conditions are checked after
+      # performing effects from other buildings.
+      if player.cards.length < 2 and player.has?(:poor_house)
+        unless player.built == :poor_house
+          deal(player)
+          bonus_string << "#{player} draws a card using the poor house. "
+        end
       end
       say bonus_string
       show_buildings(player)
@@ -1356,7 +1363,7 @@ class SanJuan
         players.each { |p| poorest << p.buildings.length }
         poorest.sort!
         players.each do |p|
-          next if p.buildings.last.id == :caritas
+          next if p.built == :caritas
           if p.buildings.length == poorest.first and p.has?(:caritas)
             deal(p)
             say "#{p} draws a card using the caritas."
