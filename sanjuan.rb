@@ -2,24 +2,15 @@
 # Author:: Jay Thomas <degradinglight@gmail.com>
 # Copyright:: (C) 2013 gfax
 # License:: GPL
-# Version:: 2013-04
+# Version:: 2013-05-04
 #
 
 class SanJuan
 
-  Title = 'San Juan'
-  Max_Buildings = 12
+  Max_Buildings = 3
   Starting_Cards = 4
 
   B = Bold
-  Colors = { silver_smelter: Irc.color(:black, :lightgray),
-             indigo_plant: Irc.color(:white, :blue),
-             sugar_mill: Irc.color(:black, :white),
-             tobacco_storage: Irc.color(:black, :olive),
-             coffee_roaster: Irc.color(:white, :black),
-             violet: Irc.color(:purple, :black),
-             cost: Irc.color(:red),
-           }
   Cards = {
     # Call these production to distinguish them
     # from the other producer-phase cards.
@@ -190,7 +181,6 @@ class SanJuan
       text: 'owner produces 1 more good',
       quantity: 3
     },
-    # test this
     quarry: {
       phase: :builder,
       cost: 4,
@@ -233,15 +223,6 @@ class SanJuan
     },
     # End-game cards:
     # test this
-    triumphal_arch: {
-      phase: :end,
-      cost: 6,
-      keywords: [ /triumph/, /arch/ ],
-      text: 'owner earns an additional 4-6-8 ' +
-            'victory points for 1-2-3 monuments',
-      quantity: 2
-    },
-    # test this
     city_hall: {
       phase: :end,
       cost: 6,
@@ -259,7 +240,14 @@ class SanJuan
             'for each of his production buildings',
       quantity: 2
     },
-    # test this
+    triumphal_arch: {
+      phase: :end,
+      cost: 6,
+      keywords: [ /triumph/, /arch/ ],
+      text: 'owner earns an additional 4-6-8 ' +
+            'victory points for 1-2-3 monuments',
+      quantity: 2
+    },
     palace: {
       phase: :end,
       cost: 6,
@@ -278,7 +266,6 @@ class SanJuan
       text: 'owner may discard 1 or 2 cards and draw 1 or 2 new cards',
       quantity: 3
     },
-    # test this
     guard_room: {
       expansion: true,
       phase: :governor,
@@ -299,6 +286,7 @@ class SanJuan
             'note: owner does no need to build for it to take affect',
       quantity: 3
     },
+    # test this
     customs_office: {
       expansion: true,
       phase: :councillor,
@@ -319,7 +307,6 @@ class SanJuan
             'is lowered by as much as 6 (requires a crane to be built over)',
       quantity: 3
     },
-    # test this
     harbor: {
       expansion: true,
       phase: :trader,
@@ -376,39 +363,59 @@ class SanJuan
       keywords: [ /free?buil/ ],
       text: 'each player may build a building with ' +
             'building costs of up to 4 free of charge',
+      quantity: 1
     },
     governor_visit: {
       expansion: true,
       phase: :event,
       keywords: [ /visit/ ],
       text: 'an already used role may be used again',
+      quantity: 1
     },
     taxes: {
       expansion: true,
       phase: :event,
       keywords: [ /tax(es|ing)/ ],
       text: 'each other player must discard 1 card from his hand',
+      quantity: 1
     },
     debt_relief: { 
       expansion: true,
       phase: :event,
       keywords: [ /debt/, /relief/ ],
       text: 'each player draws 3 cards from the supply',
+      quantity: 1
     },
     earthquake: {
       expansion: true,
       phase: :event,
       keywords: [ /earth/, /quake/ ],
       text: 'each player must destroy any 1 of his buildings',
+      quantity: 1
     },
     general_amnesty: {
       expansion: true,
       phase: :event,
       keywords: [ /general/, /amnest/ ],
       text: 'each player may exchange any number of ' +
-            'cards from his hand with the supply'
+            'cards from his hand with the supply',
+      quantity: 1
     }
   }
+  Colors = { 
+    silver_smelter: Irc.color(:black, :lightgray),
+    indigo_plant: Irc.color(:white, :blue),
+    sugar_mill: Irc.color(:black, :white),
+    tobacco_storage: Irc.color(:black, :olive),
+    coffee_roaster: Irc.color(:white, :black),
+    violet: Irc.color(:purple, :black),
+    cost: Irc.color(:red)
+  }
+  Roles = [ 
+    :indigo_plant, :sugar_mill, :coffee_roaster,
+    :tobacco_storage, :silver_smelter
+  ]
+  Title = 'San Juan'
 
 
   class Building
@@ -418,7 +425,7 @@ class SanJuan
     def initialize(card)
       @card = card
       @goods = nil # a card from stock will go here to represent produce
-      @stash = []  # cards stashed under cathedral or bank for end-game vps
+      @stash = []  # cards stashed under bank/cathedral/harbor
     end
 
     def cost
@@ -448,17 +455,17 @@ class SanJuan
 
     def to_s
       color = Colors[id] || Colors[:violet]
-      g = if goods then '(*)' else '' end
+      g = goods ? '(*)' : ''
       i = id.to_s.gsub('_',' ').capitalize
-      v = ' ' + vps.to_s
+      v = vps < 1 ? ' ?' : vps.to_s
       B + color + g + i + v + NormalText
     end
   
     def to_ss
       color = Colors[id] || Colors[:violet]
-      g = if goods then '(*)' else '' end
+      g = goods ? '(*)' : ''
       i = id.to_s.gsub('_',' ').capitalize
-      v = ' ' + card.vps.to_s
+      v = card.vps < 1 ? ' ?' : card.vps.to_s
       B + color + g + i + v + NormalText
     end
   
@@ -496,7 +503,7 @@ class SanJuan
       c = if cost.zero? then ''
           else ' ' +  Colors[:cost] + cost.to_s
           end
-      v = if vps.zero? then '?'
+      v = if vps.zero? then ''
           elsif c == '' then ' ' + vps.to_s
           else vps.to_s
           end
@@ -520,8 +527,8 @@ class SanJuan
       @built = false  # building id when built
       @max_cards = 7  # dynamic hand card size limit
       @moved = true   # false until played or passed
-      @tmp_cards = [] # used for councillor, goldmine, etc.
       @role = nil     # resets during governor phase
+      @tmp_cards = [] # used for councillor, goldmine, etc.
     end
 
     def delete_cards(request)
@@ -540,9 +547,7 @@ class SanJuan
       # Returns array of occupied productions in
       # order from least to greatest value goods.
       g_array = []
-      [:indigo_plant, :sugar_mill, :coffee_roaster,
-        :tobacco_storage, :silver_smelter
-      ].each do |e|
+      Roles.each do |e|
         n = 0
         buildings.each do |b|
           g_array << n if b.goods and b.id == e
@@ -626,8 +631,7 @@ class SanJuan
     end
     card = Card.new(id) if card.nil?
     player.buildings << Building.new(card)
-    player.buildings << Building.new(Card.new(:bank))
-    player.buildings << Building.new(Card.new(:caritas))
+    player.buildings << Building.new(Card.new(:triumphal_arch))
     deal(player, Starting_Cards)
     # Start game if there are enough players:
     if @join_timer
@@ -739,7 +743,11 @@ class SanJuan
     players.each do |p|
       if p.cards.length > p.max_cards or p.discard > 0
         # p.discard if sanjuan.start_handicap is enabled
-        n = p.discard > 0 ? p.discard : p.cards.length - p.max_cards
+        if n = p.cards.length - p.max_cards > 0
+          n += p.discard
+        else
+          n = p.discard
+        end
         show_cards(p)
         say "Please discard #{n} card#{s(n)}, #{p}."
         p_string << ", #{p}"
@@ -755,13 +763,12 @@ class SanJuan
 
   def deal_producer(player)
     n = inventory(player)
-    say "#{player}: #{n} / #{player.open_productions}"
     if n.zero?
       say "#{player} can't produce anything."
       player.moved = true
     elsif n == player.open_productions
       player.buildings.each do |b| 
-        b.goods = draw.first if b.production? and not b.goods
+        b.goods = draw if b.production? and not b.goods
       end
       say "#{player} produces #{n} good#{s(n)}."
       if n > 1 and player.has?(:well)
@@ -783,7 +790,7 @@ class SanJuan
       deal(player, n)
     end
     if player.has?(:goldsmith)
-      gold = draw.first
+      gold = draw
       p_string = "#{player} draws a goldsmith card..."
       p_array = []
       players.each { |p| p_array << p if p.has?(gold.id) }
@@ -829,7 +836,11 @@ class SanJuan
     end
   end
 
-  def draw(n=1)
+  def draw(n=:no_array)
+    # Don't return an array if no arguments
+    # were given; same way pop and shift work.
+    no_array = if n == :no_array then true else false end
+    n = 1 if n.class == Symbol
     return [] if n < 1
     if deck.length < n
       n -= deck.length
@@ -842,6 +853,7 @@ class SanJuan
     else
       cards = @deck.pop(n)
     end
+    cards = cards.first if no_array
     return cards
   end
 
@@ -1062,7 +1074,7 @@ class SanJuan
         return false
       end
     end
-    a.each { |e| player.buildings[e].goods = draw.first }
+    a.each { |e| player.buildings[e].goods = draw }
     say "#{player} produces #{n} good#{s(n)}."
     if n > 1 and player.has?(:well)
       deal(player)
@@ -1154,6 +1166,12 @@ class SanJuan
     end
     deal(player, n)
     say "#{player} trades #{a.length} good#{s(a.length)}."
+    if player.has?(:harbor)
+      n = 0
+      n += 1 until player.buildings[n].id == :harbor
+      player.buildings[n].stash << @discard.pop
+      say "#{player} puts a traded good under the harbor."
+    end
     if a.length > 1 and player.has?(:market_stand)
       deal(player)
       say "#{player} draws a card using the market stand."
@@ -1194,7 +1212,7 @@ class SanJuan
       player.delete_cards(player.cards[e])
     end
     say "#{player} discards #{n} card#{s(n)}."
-    player.discard = 0 # Don't force player to discard any longer.
+    player.discard = 0 # reset mandatory discard
     p_string = 'The governor demands you discard down to a full hand'
     players.each do |p|
       next if p == player
@@ -1289,6 +1307,49 @@ class SanJuan
     return Utils.secs_to_string(Time.now-started)
   end
 
+  def end_game
+    # Time spent playing the game.
+    @started = Time.now.to_i - started.to_i
+    show_buildings
+    say 'Game over. Final scores:'
+    stats = {}
+    players.each do |p|
+      stats[p] = {
+        base: 0, end: 0, goods: 0, monuments: 0, palace: 0,
+        productions: 0, stash: 0, total: 0, violets: 0
+      }
+      p.buildings.each do |b|
+        stats[p][:base] += b.card.vps
+        stats[p][:stash] += b.stash.size
+        stats[p][:goods] += 1 if b.goods
+        stats[p][:productions] += 1 if b.production?
+        stats[p][:monuments] += 1 if b.phase == :monument
+        stats[p][:monuments] = 3 if stats[p][:monuments] > 3
+        stats[p][:violets] += 1 if b.violet?
+        stats[p][:total] += b.vps
+      end
+      stats[p][:end] += stats[p][:violets] if p.has?(:city_hall)
+      stats[p][:end] += stats[p][:productions] * 2 if p.has?(:guild_hall)
+      stats[p][:end] += stats[p][:monuments] * 2 if p.has?(:triumphal_arch)
+      stats[p][:end] += 2 if stats[p][:monuments]
+      stats[p][:total] += stats[p][:end]
+      stats[p][:palace] += stats[p][:total] / 4 if p.has?(:palace)
+      stats[p][:total] += stats[p][:palace]
+    end
+    stats.each_pair do |k, v|
+      p_string = "#{k}#{B}:#{B} base vps: #{B}#{v[:base]}#{B}, "
+      p_string << "stash cards: #{B}+#{v[:stash]}#{B}, " if v[:stash] > 0
+      p_string << "end-game buildings: #{B}+#{v[:end]}#{B}, " if v[:end] > 0
+      p_string << "palace: #{B}+#{v[:palace]}#{B}, " if v[:palace] > 0
+      p_string << "#{B}total vps: #{v[:total]}#{B}"
+      say p_string
+    end
+    ties = false
+    update_channel_stats(stats, ties)
+    players.each { |p| update_user_stats(p, stats[p]) }
+    @plugin.remove_game(channel)
+  end
+
   def get_player(user, source=nil)
     case user
     when NilClass
@@ -1350,7 +1411,7 @@ class SanJuan
   def market_shift
     if market.empty?
       @market = [
-       { indigo_plant: 1, sugar_mill: 1, tobacco_storage: 1,
+        { indigo_plant: 1, sugar_mill: 1, tobacco_storage: 1,
           coffee_roaster: 2, silver_smelter: 2 },
         { indigo_plant: 1, sugar_mill: 1, tobacco_storage: 2,
           coffee_roaster: 2, silver_smelter: 2 },
@@ -1409,7 +1470,14 @@ class SanJuan
           p.max_cards = 12 if p.has?(:tower)
         end
       end
-      do_turn
+      # Check for game end:
+      over = false
+      players.each { |p| over = true if p.buildings.length >= Max_Buildings }
+      if over
+        end_game
+      else
+        do_turn
+      end
     elsif phase != :picker
       show_string if old_phase != phase or player.moved
     end
@@ -1542,6 +1610,7 @@ class SanJuan
     if @bot.config['sanjuan.start_handicap']
       n = 0
       players.each { |p| p.discard = deal(p, n); n+= 1 }
+      # player must discard p.discard during the governor phase
       @players = [ @players.pop ] + players
     end
     deal_chapel
@@ -1562,8 +1631,8 @@ class SanJuan
   def transfer_management(player, a)
     return if a.length.zero?
     unless player == manager
-      say "#{player.user}: you can't transfer ownership. " +
-          "#{manager} manages this game."
+      notify player, "You can't transfer ownership. " +
+                     "#{manager} manages this game."
       return
     end
     [ 'game', 'manager', 'management', 'ownership', 'to' ].each do |w|
@@ -1579,6 +1648,35 @@ class SanJuan
     end
     @manager = new_manager
     say "#{new_manager} is now game manager."
+  end
+
+  def update_channel_stats(stats, tie)
+    say 'c1'
+    tie = if tie then 1 else 0 end
+    @registry[:chan] = {} if @registry[:chan].nil?
+    chan = @registry[:chan][channel.name] || {}
+    vps = 0
+    say 'c2'
+    stats.each_value { |v| vps += v[:total] }
+    say 'c3'
+    chan[:games] = chan[:games].to_i + 1
+    chan[:longest] = started if chan[:longest].nil?
+    chan[:longest] = started if started > chan[:longest]
+    chan[:shortest] = started if chan[:shortest].nil?
+    chan[:shortest] = started if started < chan[:shortest]
+    chan[:ties] = chan[:ties].to_i + tie
+    chan[:time] = chan[:time].to_i + started
+    chan[:vps] = chan[:vps].to_i + vps
+    say 'c4'
+    @registry[:chan][channel.name] = chan
+    say 'c5'
+  end
+
+  def update_user_stats(player, pstats)
+    @registry[:user] = {} if @registry[:user].nil?
+    nick = player.user.nick.downcase
+    user = @registry[:user][nick] || {}
+   
   end
 
 end
@@ -1614,6 +1712,11 @@ class SanJuanPlugin < Plugin
     :default => false,
     :desc => 'Deal +1 card for every player after the first player. ' +
              '(See Variant section of the manual for more information.)'
+
+  Config.register Config::BooleanValue.new 'sanjuan.tie_breaker',
+    :default => false,
+    :desc => 'Counts cards, then goods if there is a tie. ' +
+             '(Ties will still show up on channel and user stats.)'
 
 
   attr :games
