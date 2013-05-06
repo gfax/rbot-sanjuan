@@ -7,7 +7,7 @@
 
 class SanJuan
 
-  Max_Buildings = 3
+  Max_Buildings = 4
   Starting_Cards = 4
 
   B = Bold
@@ -631,7 +631,9 @@ class SanJuan
     end
     card = Card.new(id) if card.nil?
     player.buildings << Building.new(card)
-    player.buildings << Building.new(Card.new(:triumphal_arch))
+    player.buildings << Building.new(@deck.pop)
+    player.buildings << Building.new(@deck.pop)
+    player.buildings << Building.new(@deck.pop)
     deal(player, Starting_Cards)
     # Start game if there are enough players:
     if @join_timer
@@ -1310,13 +1312,13 @@ class SanJuan
   def end_game
     # Time spent playing the game.
     @started = Time.now.to_i - started.to_i
-    show_buildings
-    say 'Game over. Final scores:'
+    players.each { |p| show_buildings(p, [ p.user ]) }
+    # Index stats:
     stats = {}
     players.each do |p|
       stats[p] = {
-        base: 0, end: 0, goods: 0, monuments: 0, palace: 0,
-        productions: 0, stash: 0, total: 0, violets: 0
+        base: 0, end: 0, goods: 0, monuments: 0, palace: 0, productions: 0,
+        stash: 0, total: 0, ties: 0, violets: 0, wins: 0
       }
       p.buildings.each do |b|
         stats[p][:base] += b.card.vps
@@ -1331,11 +1333,12 @@ class SanJuan
       stats[p][:end] += stats[p][:violets] if p.has?(:city_hall)
       stats[p][:end] += stats[p][:productions] * 2 if p.has?(:guild_hall)
       stats[p][:end] += stats[p][:monuments] * 2 if p.has?(:triumphal_arch)
-      stats[p][:end] += 2 if stats[p][:monuments]
+      stats[p][:end] += 2 if stats[p][:monuments] and p.has?(:triumphal_arch)
       stats[p][:total] += stats[p][:end]
       stats[p][:palace] += stats[p][:total] / 4 if p.has?(:palace)
       stats[p][:total] += stats[p][:palace]
     end
+    # Announce scores:
     stats.each_pair do |k, v|
       p_string = "#{k}#{B}:#{B} base vps: #{B}#{v[:base]}#{B}, "
       p_string << "stash cards: #{B}+#{v[:stash]}#{B}, " if v[:stash] > 0
@@ -1344,8 +1347,26 @@ class SanJuan
       p_string << "#{B}total vps: #{v[:total]}#{B}"
       say p_string
     end
-    ties = false
-    update_channel_stats(stats, ties)
+    # Find winner: 
+    scores = {}
+    stats.each_pair { |k, v| scores[k] = v[:total] }
+    top_score = scores.values.max
+    scores.select! { |k, v| v == top_score }
+    scores.each_key { |k| stats[k][:wins] = 1 }
+    if scores.size > 1
+      p_array = []
+      p_string = 'A tie between '
+      scores.each_pair do |k, v|
+        stats[k][:ties] = 1
+        p_array << k.to_s
+      end
+      p_string << "#{p_array.join(' and ')}!"
+    else 
+      scores.each_key { |k| p_string = "#{k} wins!" }
+    end
+    say p_string
+    # Update registry:
+    update_channel_stats(stats)
     players.each { |p| update_user_stats(p, stats[p]) }
     @plugin.remove_game(channel)
   end
@@ -1650,33 +1671,45 @@ class SanJuan
     say "#{new_manager} is now game manager."
   end
 
-  def update_channel_stats(stats, tie)
-    say 'c1'
-    tie = if tie then 1 else 0 end
-    @registry[:chan] = {} if @registry[:chan].nil?
-    chan = @registry[:chan][channel.name] || {}
-    vps = 0
-    say 'c2'
-    stats.each_value { |v| vps += v[:total] }
-    say 'c3'
-    chan[:games] = chan[:games].to_i + 1
-    chan[:longest] = started if chan[:longest].nil?
-    chan[:longest] = started if started > chan[:longest]
-    chan[:shortest] = started if chan[:shortest].nil?
-    chan[:shortest] = started if started < chan[:shortest]
-    chan[:ties] = chan[:ties].to_i + tie
-    chan[:time] = chan[:time].to_i + started
-    chan[:vps] = chan[:vps].to_i + vps
-    say 'c4'
-    @registry[:chan][channel.name] = chan
-    say 'c5'
+  def update_channel_stats(stats)
+    r = @registry[:chan] || {}
+    c = channel.name.downcase
+    r[c] = {} if r[c].nil?
+    ties = vps = 0
+    stats.each_value do |v|
+      ties = 1 if v[:ties] > 0
+      vps += v[:total]
+    end
+    r[c][:games] = r[c][:games].to_i + 1
+    r[c][:longest] = started if r[c][:longest].nil?
+    r[c][:longest] = started if started > r[c][:longest]
+    r[c][:shortest] = started if r[c][:shortest].nil?
+    r[c][:shortest] = started if started < r[c][:shortest]
+    r[c][:ties] = r[c][:ties].to_i + ties
+    r[c][:time] = r[c][:time].to_i + started
+    r[c][:vps] = r[c][:vps].to_i + vps
+    @registry[:chan] = r
   end
 
   def update_user_stats(player, pstats)
     @registry[:user] = {} if @registry[:user].nil?
-    nick = player.user.nick.downcase
-    user = @registry[:user][nick] || {}
-   
+    c, n = channel.name.downcase, player.user.nick.downcase
+    h1 = @registry[:chan][c][n] || {}
+    h2 = @registry[:user][n] || {}
+    [ h1, h2 ].each do |e|
+      #e[:games] = e[:games].to_i + 1
+      e[:nick] = e[:nick] || player.user
+      #e[:ties] = e[:ties].to_i + pstats[:ties]
+      #e[:vps] = e[:vps].to_i + pstats[:total]
+      #e[:wins] = e[:wins].to_i + pstats[:wins]
+    end
+    say 'b3'
+    r1 = @registry[:chan]
+    r2 = @registry[:user]
+    say 'b4'
+    r1[c][n], r2[n] = h1, h2
+    @registry[:chan], @registry[:user] = r1, r2
+    say 'b5'
   end
 
 end
@@ -1851,6 +1884,71 @@ class SanJuanPlugin < Plugin
     @games.delete(channel)
   end
 
+  def show_stats(m, params)
+    if params[:x].nil?
+      x = m.source.nick.downcase
+    elsif params[:x] == false
+      x = m.channel.name.downcase
+    else
+      x = params[:x].to_s.downcase
+    end
+    if x =~ /^#/ and @registry[:chan][xd].nil?
+      m.reply "No one has played #{Title} in #{x}."
+    elsif x == m.source.nick and @registry[:user].nil?
+      m.reply "You haven't played #{Title}"
+    elsif x == @bot.nick.downcase
+      m.reply "I haven't played #{Title}"
+    else
+      m.reply "#{x} hasn't played #{Title}"
+    end
+    return
+    end
+    if params[:y].nil?
+      if x =~ /^#/
+        m.reply "#{Bold}#{x}#{Bold} -- " +
+                "(games: #{@registry[xd][0]}, " +
+                "total damage: #{@registry[xd][1]})"
+        # Make an array of the channel's top players.
+        a = @registry[xd][2].dup
+        a = a.to_a.each { |e| e.slice!(0) }
+        a.flatten!
+        a.sort! { |x,y| y[:damage] <=> x[:damage] }
+        z = params[:z] || 5
+        z = if z.to_i.between?(1,10) then z.to_i - 1 else 4 end
+        top_players = a[0..z]
+        n = 1
+        top_players.each do |k|
+          @bot.say m.replyto, "#{Bold}#{n}. #{k[:nick]}#{Bold} - " +
+                              "#{k[:damage]} dmg (#{k[:wins]}/" +
+                              "#{k[:games]} games won)"
+          n += 1
+          end
+        return
+      else
+        @bot.say m.replyto, "#{Bold}#{@registry[xd][:nick]}#{Bold} -- " +
+                            "Wins: #{@registry[xd][:wins]}, " +
+                            "games: #{@registry[xd][:games]}, " +
+                            "damage: #{@registry[xd][:damage]}, " +
+                            "special bonuses: #{registry[xd][:bonuses]}"
+        return
+      end
+    end
+    y = params[:y].to_s.downcase
+    unless @registry[x][2].has_key? y
+      "They haven't played a game in this channel, #{m.source.nick}"
+      return
+    end
+    @bot.say m.replyto, "#{Bold}#{@registry[x][2][y][:nick]}#{Bold} " +
+                        "(in #{x}) -- Wins: #{@registry[x][2][y][:wins]}, " +
+                        "games: #{@registry[x][2][y][:games]}, " +
+
+  end
+
+  def reset_everything(m, params)
+    @registry.clear
+    m.reply 'Registry cleared.'
+  end
+
   def stop_game(m, plugin=nil)
     unless g = @games[m.channel]
       m.reply "No one is playing #{Title} here."
@@ -1874,6 +1972,8 @@ plugin = SanJuanPlugin.new
     plugin.map "#{scope} #{x}",
       :private => false, :action => :stop_game
   end
+  plugin.map "#{scope} reset",
+    :action => :reset_everything
   plugin.map "#{scope} stat[s] [:x [:y]]",
     :action => :show_stats
   plugin.map "#{scope} top [:z]",
