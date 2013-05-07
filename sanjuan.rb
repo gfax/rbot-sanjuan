@@ -102,7 +102,9 @@ class SanJuan
       cost: 2,
       vps: 1,
       keywords: [ /crane/ ],
-      text: 'owner may build over one of his building (and pay the difference)',
+      text: 'owner may build over one of his building (and pay ' +
+            'the difference); specify the target building when ' +
+            'when building: p b# 2 3... (# being the building number)',
       quantity: 3
     },
     black_market: {
@@ -505,9 +507,9 @@ class SanJuan
           end
       v = if vps.zero? then ''
           elsif c == '' then ' ' + vps.to_s
-          else vps.to_s
+          else '/' + vps.to_s
           end
-      B + color + i + c + color + '/' + v + NormalText
+      B + color + i + c + color + v + NormalText
     end
 
   end
@@ -1334,7 +1336,17 @@ class SanJuan
       stats[p][:end] += stats[p][:productions] * 2 if p.has?(:guild_hall)
       stats[p][:end] += stats[p][:monuments] * 2 if p.has?(:triumphal_arch)
       stats[p][:end] += 2 if stats[p][:monuments] and p.has?(:triumphal_arch)
-      stats[p][:total] += stats[p][:end]
+      if p.has?(:residence)
+        values = { 1: 0, 2: 0, 3: 0, 4: 0 }
+        buildings.each do |b|
+          values[b.card.vps] += 1 if b.card.vps.between?(1,4)
+        end
+        values.each_key do |k|
+          values[k] /= 3
+          stats[p][:end] += values[k] * k
+        end
+      end
+      stats[p][:total] += stats[p][:end] # "6-card" values
       stats[p][:palace] += stats[p][:total] / 4 if p.has?(:palace)
       stats[p][:total] += stats[p][:palace]
     end
@@ -1938,10 +1950,7 @@ class SanJuanPlugin < Plugin
       "They haven't played a game in this channel, #{m.source.nick}"
       return
     end
-    @bot.say m.replyto, "#{Bold}#{@registry[x][2][y][:nick]}#{Bold} " +
-                        "(in #{x}) -- Wins: #{@registry[x][2][y][:wins]}, " +
-                        "games: #{@registry[x][2][y][:games]}, " +
-
+    @bot.say m.replyto, "#{Bold}#{@registry[x][2][y][:nick]}#{Bold} "
   end
 
   def reset_everything(m, params)
