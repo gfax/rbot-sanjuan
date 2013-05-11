@@ -1337,7 +1337,7 @@ class SanJuan
       stats[p][:end] += stats[p][:monuments] * 2 if p.has?(:triumphal_arch)
       stats[p][:end] += 2 if stats[p][:monuments] and p.has?(:triumphal_arch)
       if p.has?(:residence)
-        values = { 1: 0, 2: 0, 3: 0, 4: 0 }
+        values = { 1 => 0, 2 => 0, 3 => 0, 4 => 0 }
         buildings.each do |b|
           values[b.card.vps] += 1 if b.card.vps.between?(1,4)
         end
@@ -1695,6 +1695,7 @@ class SanJuan
     r[c][:games] = r[c][:games].to_i + 1
     r[c][:longest] = started if r[c][:longest].nil?
     r[c][:longest] = started if started > r[c][:longest]
+    r[c][:name] = channel.name
     r[c][:shortest] = started if r[c][:shortest].nil?
     r[c][:shortest] = started if started < r[c][:shortest]
     r[c][:ties] = r[c][:ties].to_i + ties
@@ -1897,60 +1898,78 @@ class SanJuanPlugin < Plugin
   end
 
   def show_stats(m, params)
-    if params[:x].nil?
-      x = m.source.nick.downcase
-    elsif params[:x] == false
-      x = m.channel.name.downcase
-    else
-      x = params[:x].to_s.downcase
-    end
-    if x =~ /^#/ and @registry[:chan][xd].nil?
-      m.reply "No one has played #{Title} in #{x}."
-    elsif x == m.source.nick and @registry[:user].nil?
-      m.reply "You haven't played #{Title}"
-    elsif x == @bot.nick.downcase
-      m.reply "I haven't played #{Title}"
-    else
-      m.reply "#{x} hasn't played #{Title}"
-    end
-    return
-    end
-    if params[:y].nil?
-      if x =~ /^#/
-        m.reply "#{Bold}#{x}#{Bold} -- " +
-                "(games: #{@registry[xd][0]}, " +
-                "total damage: #{@registry[xd][1]})"
-        # Make an array of the channel's top players.
-        a = @registry[xd][2].dup
-        a = a.to_a.each { |e| e.slice!(0) }
-        a.flatten!
-        a.sort! { |x,y| y[:damage] <=> x[:damage] }
-        z = params[:z] || 5
-        z = if z.to_i.between?(1,10) then z.to_i - 1 else 4 end
-        top_players = a[0..z]
-        n = 1
-        top_players.each do |k|
-          @bot.say m.replyto, "#{Bold}#{n}. #{k[:nick]}#{Bold} - " +
-                              "#{k[:damage]} dmg (#{k[:wins]}/" +
-                              "#{k[:games]} games won)"
-          n += 1
-          end
-        return
-      else
-        @bot.say m.replyto, "#{Bold}#{@registry[xd][:nick]}#{Bold} -- " +
-                            "Wins: #{@registry[xd][:wins]}, " +
-                            "games: #{@registry[xd][:games]}, " +
-                            "damage: #{@registry[xd][:damage]}, " +
-                            "special bonuses: #{registry[xd][:bonuses]}"
-        return
-      end
-    end
-    y = params[:y].to_s.downcase
-    unless @registry[x][2].has_key? y
-      "They haven't played a game in this channel, #{m.source.nick}"
+    if @registry[:chan].nil?
+      "No #{Title} stats recorded yet."
       return
     end
-    @bot.say m.replyto, "#{Bold}#{@registry[x][2][y][:nick]}#{Bold} "
+    if params[:a] == false
+      if @registry[:chan][m.channel.name.downcase]
+        show_stats_chan(m, m.channel.name.downcase, params[:x].to_i)
+      else
+        m.reply "No one has played #{Title} in #{m.channel.name}."
+      end
+      return
+    end
+    chan, user, n = nil, nil, 0
+    params[:a].each do |e|
+      chan = e.downcase if @registry[:chan][e.downcase]
+      user = e.downcase if @registry[:user][e.downcase]
+      n = e.to_i if e.to_i > n
+    end
+    if chan.nil? and user.nil?
+      # Check for missing # symbol.
+      params[:a].each { |e| chan = chan || @registry[:chan]["##{chan}"] }
+      if chan
+        show_stats_chan(m, chan, n)
+      else
+        m.reply "No stats for #{a.join(' or')}."
+      end
+    elsif user
+      show_stats_user(m, user, chan)
+    elsif chan
+      show_stats_chan(m, chan, n)
+    end
+  end
+
+  def show_stats_chan(m, chan, n)
+    c = @registry[:chan][chan]
+    if n.zero?
+      @bot.say m.replyto, "#{c[:name]}: #{c[:games]} games " +
+                          "played, #{c[:ties]} ties."
+      time = Utils.secs_to_string(c[:longest])
+      @bot.say m.replyto, "Longest game: #{time}"
+      time = Utils.secs_to_string(c[:shortest])
+      @bot.say m.replyto, "Shortest game: #{time}"
+      time = Utils.secs_to_string(c[:time])
+      avg = Utils.secs_to_string(c[:time]/c[:games])
+      @bot.say m.replyto, "Time accumulated: #{time} " +
+                          "(#{avg} average per game.)"
+      @bot.say m.replyto, "VPs accumulated: #{c[:vps]} " +
+                          "(#{c[:vps]/c[:games]} VPs average per game.)"
+      return
+    end
+    n = 5 unless n.between?(1,20)
+    @bot.say m.replyto, "#{c[:name]}'s top #{n} players:"
+    tops = {}
+    c.each_pair do |k, v|
+      next unless k.is_a? String
+      tops[v[:vps]] = k
+    end
+    if n.between?(1,8)
+      i = 1
+      tops.sort.each do |e|
+        str = "#{Bold}#{i}). #{c[e[1]][:nick]}#{Bold} - #{e.first} " +
+              "vps (#{c[e[1]][:wins]}/#{c[e[1]][:games]} " +
+              "games won, #{c[e[1]][:ties]} ties)"
+        @bot.say m.replyto, str
+      end
+    else
+      @bot.say m.replyto, "that's a lot..."
+    end
+  end
+
+  def show_stats_user(m, user, chan=nil)
+    @bot.say m.replyto, user
   end
 
   def reset_everything(m, params)
@@ -1983,11 +2002,11 @@ plugin = SanJuanPlugin.new
   end
   plugin.map "#{scope} reset",
     :action => :reset_everything
-  plugin.map "#{scope} stat[s] [:x [:y]]",
+  plugin.map "#{scope} stat[s] *a",
     :action => :show_stats
-  plugin.map "#{scope} top [:z]",
-    :private => false, :action => :show_stats,
-    :defaults => { :x => false, :z => 5 }
+  plugin.map "#{scope} top [:n]",
+    :private => false, :action => :show_statss,
+    :defaults => { :a => false, :n => 5 }
   plugin.map "#{scope}",
     :private => false, :action => :create_game
 end
