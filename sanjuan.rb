@@ -245,7 +245,7 @@ class SanJuan
     triumphal_arch: {
       phase: :end,
       cost: 6,
-      keywords: [ /triumph/ ],
+      keywords: [ /triump/ ],
       text: 'owner earns an additional 4-6-8 ' +
             'victory points for 1-2-3 monuments',
       quantity: 2
@@ -919,6 +919,9 @@ class SanJuan
       a.each do |e|
         if e < 0 or player.cards[e].nil?
           notify player, 'Specify cards from your hand.'
+          return false
+        elsif player.has?(player.cards[e].id) and player.cards[e].violet?
+          notify player, 'You may only have one of each type of violet buildings.'
           return false
         end
         cards << player.cards[e].dup
@@ -1795,7 +1798,7 @@ class SanJuanPlugin < Plugin
     if card
       color = SanJuan::Colors[id] || SanJuan::Colors[:violet]
       cost = if card[:cost] then " (cost: #{card[:cost]}" else '' end
-      vps = if card[:vps] then "victory points: #{card[:vps]})" else '' end
+      vps = "victory points: #{card[:vps] ? cards[:vps] : '?'})"
       phase = case card[:phase]
               when :all then 'All phases: '
               when :monument then 'Monument: '
