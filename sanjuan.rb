@@ -459,7 +459,7 @@ class SanJuan
       color = Colors[id] || Colors[:violet]
       g = goods ? '(*)' : ''
       i = id.to_s.gsub('_',' ').capitalize
-      v = vps < 1 ? ' ?' : vps.to_s
+      v = vps < 1 ? ' ?' : ' ' + vps.to_s
       B + color + g + i + v + NormalText
     end
   
@@ -467,7 +467,7 @@ class SanJuan
       color = Colors[id] || Colors[:violet]
       g = goods ? '(*)' : ''
       i = id.to_s.gsub('_',' ').capitalize
-      v = card.vps < 1 ? ' ?' : card.vps.to_s
+      v = card.vps < 1 ? ' ?' : ' ' + card.vps.to_s
       B + color + g + i + v + NormalText
     end
   
@@ -518,7 +518,7 @@ class SanJuan
   class Player
 
     attr_accessor :user, :banked, :buildings, :built, :cards, :discard,
-                  :max_cards, :moved, :role, :tmp_cards
+                  :max_cards, :moved, :role, :time, :tmp_cards
 
     def initialize(user)
       @user = user
@@ -530,6 +530,7 @@ class SanJuan
       @max_cards = 7  # dynamic hand card size limit
       @moved = true   # false until played or passed
       @role = nil     # resets during governor phase
+      @time= Time.now # time player joined game
       @tmp_cards = [] # used for councillor, goldmine, etc.
     end
 
@@ -1334,8 +1335,10 @@ class SanJuan
       end
       stats[p][:end] += stats[p][:violets] if p.has?(:city_hall)
       stats[p][:end] += stats[p][:productions] * 2 if p.has?(:guild_hall)
-      stats[p][:end] += stats[p][:monuments] * 2 if p.has?(:triumphal_arch)
-      stats[p][:end] += 2 if stats[p][:monuments] and p.has?(:triumphal_arch)
+      if p.has?(:triumphal_arch)
+        stats[p][:end] += 2 if stats[p][:monuments] > 0
+        stats[p][:end] += stats[p][:monuments] * 2
+      end
       if p.has?(:residence)
         values = { 1 => 0, 2 => 0, 3 => 0, 4 => 0 }
         buildings.each do |b|
@@ -1549,6 +1552,8 @@ class SanJuan
     else
       say "#{player} was replaced by #{B + new_player.nick + B}!"
       player.user = new_player
+      # Reset player's accumulated time playing this game.
+      player.time = Time.now
       say "#{player} is now game manager." if player == manager
     end
   end
@@ -1695,6 +1700,7 @@ class SanJuan
     r[c][:games] = r[c][:games].to_i + 1
     r[c][:longest] = started if r[c][:longest].nil?
     r[c][:longest] = started if started > r[c][:longest]
+    # display-name for proper caps
     r[c][:name] = channel.name
     r[c][:shortest] = started if r[c][:shortest].nil?
     r[c][:shortest] = started if started < r[c][:shortest]
@@ -1710,19 +1716,20 @@ class SanJuan
     h1 = @registry[:chan][c][n] || {}
     h2 = @registry[:user][n] || {}
     [ h1, h2 ].each do |e|
-      #e[:games] = e[:games].to_i + 1
-      e[:nick] = e[:nick] || player.user
+      e[:games] = e[:games].to_i + 1
+      # Get player's nick in proper caps.
+      e[:nick] = player.user.to_s
       #e[:ties] = e[:ties].to_i + pstats[:ties]
-      #e[:vps] = e[:vps].to_i + pstats[:total]
-      #e[:wins] = e[:wins].to_i + pstats[:wins]
+      e[:time] = e[:time].to_i + player.time
+      e[:vps] = e[:vps].to_i + pstats[:total]
+      e[:wins] = e[:wins].to_i + pstats[:wins]
+      #say 'b3'
     end
-    say 'b3'
     r1 = @registry[:chan]
     r2 = @registry[:user]
-    say 'b4'
     r1[c][n], r2[n] = h1, h2
     @registry[:chan], @registry[:user] = r1, r2
-    say 'b5'
+    #say 'b5'
   end
 
 end
@@ -1922,7 +1929,7 @@ class SanJuanPlugin < Plugin
       if chan
         show_stats_chan(m, chan, n)
       else
-        m.reply "No stats for #{a.join(' or')}."
+        m.reply "No stats for #{params[:a].join(' or ')}."
       end
     elsif user
       show_stats_user(m, user, chan)
@@ -1943,9 +1950,9 @@ class SanJuanPlugin < Plugin
       time = Utils.secs_to_string(c[:time])
       avg = Utils.secs_to_string(c[:time]/c[:games])
       @bot.say m.replyto, "Time accumulated: #{time} " +
-                          "(#{avg} average per game.)"
+                          "(#{avg} average per game)"
       @bot.say m.replyto, "VPs accumulated: #{c[:vps]} " +
-                          "(#{c[:vps]/c[:games]} VPs average per game.)"
+                          "(#{c[:vps]/c[:games]} VPs average per game)"
       return
     end
     n = 5 unless n.between?(1,20)
@@ -1969,7 +1976,18 @@ class SanJuanPlugin < Plugin
   end
 
   def show_stats_user(m, user, chan=nil)
-    @bot.say m.replyto, user
+    if chan
+      u = @registry[:chan][chan][user]
+      string = "#{u[:nick]} (in #{@registry[:chan][chan][:name]})"
+    else
+      u = @registry[:user][user]
+      string = u[:nick]
+    end
+    string << "total VPs: #{u[:vps]}, "
+    string << "wins: #{u[:wins]}, "
+    string << "games played: #{u[:games]}, "
+    string << "ties: #{u[:ties]}, "
+    string << "in-game time: #{u[:time]}."
   end
 
   def reset_everything(m, params)
