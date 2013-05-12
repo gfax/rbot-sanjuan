@@ -7,7 +7,7 @@
 
 class SanJuan
 
-  Max_Buildings = 4
+  Max_Buildings = 12
   Starting_Cards = 4
 
   B = Bold
@@ -634,9 +634,7 @@ class SanJuan
     end
     card = Card.new(id) if card.nil?
     player.buildings << Building.new(card)
-    player.buildings << Building.new(@deck.pop)
-    player.buildings << Building.new(@deck.pop)
-    player.buildings << Building.new(@deck.pop)
+    #10.times do { player.buildings << Building.new(@deck.pop) }
     deal(player, Starting_Cards)
     # Start game if there are enough players:
     if @join_timer
@@ -748,13 +746,14 @@ class SanJuan
     players.each do |p|
       if p.cards.length > p.max_cards or p.discard > 0
         # p.discard if sanjuan.start_handicap is enabled
-        if n = p.cards.length - p.max_cards > 0
-          n += p.discard
+        if p.cards.length - p.max_cards > 0
+          n = p.cards.length - p.max_cards
         else
-          n = p.discard
+          n = 0
         end
+        n += p.discard
         show_cards(p)
-        say "Please discard #{n} card#{s(n)}, #{p}."
+        notify p, "Please discard #{n} card#{s(n)}, #{p}."
         p_string << ", #{p}"
         p.moved = false
       end
