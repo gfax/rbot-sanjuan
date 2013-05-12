@@ -245,7 +245,7 @@ class SanJuan
     triumphal_arch: {
       phase: :end,
       cost: 6,
-      keywords: [ /triumph/, /arch/ ],
+      keywords: [ /triumph/ ],
       text: 'owner earns an additional 4-6-8 ' +
             'victory points for 1-2-3 monuments',
       quantity: 2
