@@ -2,7 +2,7 @@
 # Author:: Jay Thomas <degradinglight@gmail.com>
 # Copyright:: (C) 2013 gfax
 # License:: GPL
-# Version:: 2013-05-04
+# Version:: 2013-05-13
 #
 
 class SanJuan
@@ -634,7 +634,7 @@ class SanJuan
     end
     card = Card.new(id) if card.nil?
     player.buildings << Building.new(card)
-    10.times { player.buildings << Building.new(@deck.pop) }
+    #10.times { player.buildings << Building.new(@deck.pop) }
     deal(player, Starting_Cards)
     # Start game if there are enough players:
     if @join_timer
@@ -1318,7 +1318,6 @@ class SanJuan
   def end_game
     # Time spent playing the game.
     @started = Time.now.to_i - started.to_i
-    players.each { |p| show_buildings(p, [ p.user ]) }
     # Index stats:
     stats = {}
     players.each do |p|
@@ -1358,6 +1357,7 @@ class SanJuan
       stats[p][:total] += stats[p][:palace]
     end
     # Announce scores:
+    players.each { |p| show_buildings(p, [ p.user ]) }
     stats.each_pair do |k, v|
       p_string = "#{k}#{B}:#{B} base vps: #{B}#{v[:base]}#{B}, "
       p_string << "stash cards: #{B}+#{v[:stash]}#{B}, " if v[:stash] > 0
@@ -1727,13 +1727,11 @@ class SanJuan
       e[:time] = e[:time].to_i + player.time
       e[:vps] = e[:vps].to_i + pstats[:total]
       e[:wins] = e[:wins].to_i + pstats[:wins]
-      say 'b3'
     end
     r1 = @registry[:chan]
     r2 = @registry[:user]
     r1[c][n], r2[n] = h1, h2
     @registry[:chan], @registry[:user] = r1, r2
-    #say 'b5'
   end
 
 end
