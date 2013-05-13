@@ -634,7 +634,7 @@ class SanJuan
     end
     card = Card.new(id) if card.nil?
     player.buildings << Building.new(card)
-    #10.times do { player.buildings << Building.new(@deck.pop) }
+    10.times { player.buildings << Building.new(@deck.pop) }
     deal(player, Starting_Cards)
     # Start game if there are enough players:
     if @join_timer
@@ -753,7 +753,7 @@ class SanJuan
         end
         n += p.discard
         show_cards(p)
-        notify p, "Please discard #{n} card#{s(n)}, #{p}."
+        say "Please discard #{n} card#{s(n)}, #{p}."
         p_string << ", #{p}"
         p.moved = false
       end
@@ -920,11 +920,12 @@ class SanJuan
         if e < 0 or player.cards[e].nil?
           notify player, 'Specify cards from your hand.'
           return false
-        elsif player.has?(player.cards[e].id) and player.cards[e].violet?
-          notify player, 'You may only have one of each type of violet buildings.'
-          return false
         end
         cards << player.cards[e].dup
+      end
+      if player.has?(player.cards[a[0]].id) and player.cards[a[0]].violet?
+        notify player, 'You may only have one of each type of violet building.'
+        return false
       end
       cost += player.cards[a.first].cost
       cost -= 1 if player.has?(:smithy) and player.cards[a.first].production?
@@ -1321,6 +1322,7 @@ class SanJuan
     # Index stats:
     stats = {}
     players.each do |p|
+      p.time = Time.now.to_i - p.time.to_i
       stats[p] = {
         base: 0, end: 0, goods: 0, monuments: 0, palace: 0, productions: 0,
         stash: 0, total: 0, ties: 0, violets: 0, wins: 0
@@ -1721,11 +1723,11 @@ class SanJuan
       e[:games] = e[:games].to_i + 1
       # Get player's nick in proper caps.
       e[:nick] = player.user.to_s
-      #e[:ties] = e[:ties].to_i + pstats[:ties]
+      e[:ties] = e[:ties].to_i + pstats[:ties]
       e[:time] = e[:time].to_i + player.time
       e[:vps] = e[:vps].to_i + pstats[:total]
       e[:wins] = e[:wins].to_i + pstats[:wins]
-      #say 'b3'
+      say 'b3'
     end
     r1 = @registry[:chan]
     r2 = @registry[:user]
@@ -1908,12 +1910,12 @@ class SanJuanPlugin < Plugin
 
   def show_stats(m, params)
     if @registry[:chan].nil?
-      "No #{Title} stats recorded yet."
+      m.reply "No #{Title} stats recorded yet."
       return
     end
     if params[:a] == false
       if @registry[:chan][m.channel.name.downcase]
-        show_stats_chan(m, m.channel.name.downcase, params[:x].to_i)
+        show_stats_chan(m, m.channel.name.downcase, params[:n].to_i)
       else
         m.reply "No one has played #{Title} in #{m.channel.name}."
       end
@@ -1927,7 +1929,7 @@ class SanJuanPlugin < Plugin
     end
     if chan.nil? and user.nil?
       # Check for missing # symbol.
-      params[:a].each { |e| chan = chan || @registry[:chan]["##{chan}"] }
+      params[:a].each { |e| chan = "##{chan}" if @registry[:chan]["##{chan}"] }
       if chan
         show_stats_chan(m, chan, n)
       else
@@ -1943,53 +1945,67 @@ class SanJuanPlugin < Plugin
   def show_stats_chan(m, chan, n)
     c = @registry[:chan][chan]
     if n.zero?
-      @bot.say m.replyto, "#{c[:name]}: #{c[:games]} games " +
-                          "played, #{c[:ties]} ties."
-      time = Utils.secs_to_string(c[:longest])
-      @bot.say m.replyto, "Longest game: #{time}"
-      time = Utils.secs_to_string(c[:shortest])
-      @bot.say m.replyto, "Shortest game: #{time}"
-      time = Utils.secs_to_string(c[:time])
-      avg = Utils.secs_to_string(c[:time]/c[:games])
-      @bot.say m.replyto, "Time accumulated: #{time} " +
-                          "(#{avg} average per game)"
-      @bot.say m.replyto, "VPs accumulated: #{c[:vps]} " +
-                          "(#{c[:vps]/c[:games]} VPs average per game)"
+      str = "#{Bold}#{c[:name]}:#{Bold} #{c[:games]} games played, "
+      str << "#{c[:ties]} ties, "
+      str << "VPs accumulated: #{c[:vps]} "
+      str << "(#{c[:vps]/c[:games]} VPs average per game), "
+      str << "longest game: #{Utils.secs_to_string(c[:longest])}, "
+      str << "shortest game: #{ Utils.secs_to_string(c[:shortest])}, "
+      str << "time accumulated: #{Utils.secs_to_string(c[:time])} "
+      str << "(#{Utils.secs_to_string(c[:time]/c[:games])} average per game)."
+      @bot.say m.replyto, str
       return
     end
     n = 5 unless n.between?(1,20)
-    @bot.say m.replyto, "#{c[:name]}'s top #{n} players:"
     tops = {}
     c.each_pair do |k, v|
       next unless k.is_a? String
       tops[v[:vps]] = k
     end
+    n = tops.size if n > tops.size
+    @bot.say m.replyto, "#{c[:name]}'s top #{n} players:"
+    i = 1
     if n.between?(1,8)
-      i = 1
-      tops.sort.each do |e|
-        str = "#{Bold}#{i}). #{c[e[1]][:nick]}#{Bold} - #{e.first} " +
-              "vps (#{c[e[1]][:wins]}/#{c[e[1]][:games]} " +
-              "games won, #{c[e[1]][:ties]} ties)"
+      tops.sort.reverse.each do |e|
+        str = "#{Bold}#{i}.) #{c[e[1]][:nick]}#{Bold} - "
+        str << "#{e.first} vps, "
+        str << "#{c[e[1]][:wins]}/#{c[e[1]][:games]} wins, "
+        str << "#{c[e[1]][:ties]} ties."
         @bot.say m.replyto, str
+        i += 1
       end
     else
-      @bot.say m.replyto, "that's a lot..."
+      str = ''
+      tops.sort.reverse.each do |e|
+        str << "#{Bold}#{i}.) #{c[e[1]][:nick]}#{Bold} - "
+        str << "#{e.first} vps"
+        i += 1
+        if i > n
+          break
+        else
+          str << ', '
+        end
+      end
+      @bot.say m.replyto, str
     end
   end
 
   def show_stats_user(m, user, chan=nil)
     if chan
       u = @registry[:chan][chan][user]
-      string = "#{u[:nick]} (in #{@registry[:chan][chan][:name]})"
+      chan = @registry[:chan][chan][:name]
+      str = "#{Bold}#{u[:nick]}#{Bold} (in #{chan}) "
     else
       u = @registry[:user][user]
-      string = u[:nick]
+      str = "#{Bold}#{u[:nick]}#{Bold} "
     end
-    string << "total VPs: #{u[:vps]}, "
-    string << "wins: #{u[:wins]}, "
-    string << "games played: #{u[:games]}, "
-    string << "ties: #{u[:ties]}, "
-    string << "in-game time: #{u[:time]}."
+    str << "total VPs: #{u[:vps]}, "
+    str << "wins: #{u[:wins]}, "
+    str << "games played: #{u[:games]}, "
+    str << "ties: #{u[:ties]}, "
+    str << "in-game time: #{Utils.secs_to_string(u[:time])} "
+    str << "(#{Utils.secs_to_string(u[:time]/u[:games])} average per game)."
+    @bot.say m.replyto, str
   end
 
   def reset_everything(m, params)
@@ -2025,7 +2041,7 @@ plugin = SanJuanPlugin.new
   plugin.map "#{scope} stat[s] *a",
     :action => :show_stats
   plugin.map "#{scope} top [:n]",
-    :private => false, :action => :show_statss,
+    :private => false, :action => :show_stats,
     :defaults => { :a => false, :n => 5 }
   plugin.map "#{scope}",
     :private => false, :action => :create_game
