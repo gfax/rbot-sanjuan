@@ -1308,7 +1308,6 @@ class SanJuan
   end
 
   def elapsed_time
-    return nil if started
     return Utils.secs_to_string(Time.now-started)
   end
 
