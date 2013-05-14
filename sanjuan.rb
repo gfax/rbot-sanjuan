@@ -228,7 +228,7 @@ class SanJuan
       phase: :end,
       cost: 6,
       keywords: [ /city/ ],
-      text: 'owner earns 1 additional victory point ' + 
+      text: 'owner earns 1 additional victory point ' +
             'for each of his violet buildings',
       quantity: 2
     },
@@ -313,7 +313,7 @@ class SanJuan
       cost: 4,
       vps: 2,
       keywords: [ /harbor/ ],
-      text: 'owner must put a sold good under his ' + 
+      text: 'owner must put a sold good under his ' +
             'harbor (each scores 1 VP at game end)',
       quantity: 3
     },
@@ -378,7 +378,7 @@ class SanJuan
       text: 'each other player must discard 1 card from his hand',
       quantity: 1
     },
-    debt_relief: { 
+    debt_relief: {
       expansion: true,
       phase: :event,
       keywords: [ /debt/, /relief/ ],
@@ -401,7 +401,7 @@ class SanJuan
       quantity: 1
     }
   }
-  Colors = { 
+  Colors = {
     silver_smelter: Irc.color(:black, :lightgray),
     indigo_plant: Irc.color(:white, :blue),
     sugar_mill: Irc.color(:black, :white),
@@ -410,7 +410,7 @@ class SanJuan
     violet: Irc.color(:purple, :black),
     cost: Irc.color(:red)
   }
-  Roles = [ 
+  Roles = [
     :indigo_plant, :sugar_mill, :coffee_roaster,
     :tobacco_storage, :silver_smelter
   ]
@@ -420,7 +420,7 @@ class SanJuan
   class Building
 
     attr_accessor :card, :goods, :stash
-  
+
     def initialize(card)
       @card = card
       @goods = nil # a card from stock will go here to represent produce
@@ -459,7 +459,7 @@ class SanJuan
       v = vps < 1 ? ' ?' : ' ' + vps.to_s
       B + color + g + i + v + NormalText
     end
-  
+
     def to_ss
       color = Colors[id] || Colors[:violet]
       g = goods ? '(*)' : ''
@@ -467,10 +467,10 @@ class SanJuan
       v = card.vps < 1 ? ' ?' : ' ' + card.vps.to_s
       B + color + g + i + v + NormalText
     end
-  
+
   end
-  
-  
+
+
   class Card
 
     attr_reader :id, :cost, :phase, :vps
@@ -642,14 +642,14 @@ class SanJuan
       say "Game will start in #{B}#{countdown}#{B} seconds."
     end
   end
- 
+
   def create_deck
     # Extract help information from card hashes.
     Cards.each_pair do |key, value|
       next if value[:phase] == :event and not @bot.config['sanjuan.events']
       next if value[:expansion] and not @bot.config['sanjuan.expansion']
       # Add an extra production card of each kind if using the expansion deck.
-      x = (@bot.config['sanjuan.expansion'] and value[:phase] == :production)     
+      x = (@bot.config['sanjuan.expansion'] and value[:phase] == :production)
       x = if x then 1 else 0 end
       (value[:quantity] + x).times { @deck << Card.new(key) }
     end
@@ -768,7 +768,7 @@ class SanJuan
       say "#{player} can't produce anything."
       player.moved = true
     elsif n == player.open_productions
-      player.buildings.each do |b| 
+      player.buildings.each do |b|
         b.goods = draw if b.production? and not b.goods
       end
       say "#{player} produces #{n} good#{s(n)}."
@@ -978,7 +978,7 @@ class SanJuan
       show_buildings(player)
       show_cards(player)
     end
-    p_string = 'Build or pass'  
+    p_string = 'Build or pass'
     players.each do |p|
       next if p == player
       p_string << ", #{p}" unless p.moved
@@ -1268,7 +1268,7 @@ class SanJuan
   end
 
   def drop_player(dropper, a)
-    case player = a.first 
+    case player = a.first
     when nil, 'me' then dropper
     else get_player(a.first, dropper)
     end
@@ -1363,7 +1363,7 @@ class SanJuan
       p_string << "#{B}total vps: #{v[:total]}#{B}"
       say p_string
     end
-    # Find winner: 
+    # Find winner:
     scores = {}
     stats.each_pair { |k, v| scores[k] = v[:total] }
     top_score = scores.values.max
@@ -1377,7 +1377,7 @@ class SanJuan
         p_array << k.to_s
       end
       p_string << "#{p_array.join(' and ')}!"
-    else 
+    else
       scores.each_key { |k| p_string = "#{k} wins!" }
     end
     say p_string
@@ -1613,12 +1613,19 @@ class SanJuan
     end
   end
 
+  def show_help(player, a)
+    return unless a.first.to_i.between?(1, player.cards.size)
+    card = player.cards[a.first.to_i-1]
+    notify player, "#{card} - #{Cards[card.id][:phase]} " +
+                   "card: #{Cards[card.id][:text]}"
+  end
+
   def show_market
     return unless phase == :trader
     m_string = 'Market prices: '
     market.first.each_key do |key|
-      m_string << B + Colors[key] + key.to_s.capitalize +
-                  ": #{market.first[key]} #{NormalText}"
+      m_string << B + Colors[key] + key.to_s.gsub('_',' ').capitalize +
+                  ':' + market.first[key] + NormalText
     end
     say m_string
   end
@@ -1637,7 +1644,7 @@ class SanJuan
     end
     say r_string
   end
-    
+
   def show_string
     say string
     show_market if phase == :trader
@@ -1777,7 +1784,7 @@ class SanJuanPlugin < Plugin
     super
     @games = {}
   end
-  
+
   def help(plugin, topic='')
     # Extract help information from Cards hash.
     id, card = nil, nil
@@ -1795,7 +1802,7 @@ class SanJuanPlugin < Plugin
     if card
       color = SanJuan::Colors[id] || SanJuan::Colors[:violet]
       cost = if card[:cost] then " (cost: #{card[:cost]}" else '' end
-      vps = "victory points: #{card[:vps] ? cards[:vps] : '?'})"
+      vps = "victory points: #{card[:vps] ? card[:vps] : '?'})"
       phase = case card[:phase]
               when :all then 'All phases: '
               when :monument then 'Monument: '
@@ -1803,7 +1810,7 @@ class SanJuanPlugin < Plugin
               else card[:phase].to_s.capitalize + ' phase: '
               end
       return Bold + color + id.to_s.gsub('_',' ').capitalize + NormalText +
-             cost + ' / ' + vps + " - " + phase + card[:text]
+             cost + ' / ' + vps + ' - ' + phase + card[:text]
     end
     # Check other help topics for information.
     p = @bot.config['core.address_prefix'].first
@@ -1819,6 +1826,7 @@ class SanJuanPlugin < Plugin
       'Special buildings like chapel or bank are marked with a | for ' +
       'every card they are storing.'
     when /command/
+      'h/help <card #> for information on a specific card -- ' +
       'play/pick cards: p <card #> -- build: p <card #> <discard #> -- ' +
       'produce/trade: p <building #> -- pass -- pa (when applicable) ' +
       'show roles: r -- show turn: t -- replace: replace [with] <user> ' +
@@ -1880,8 +1888,8 @@ class SanJuanPlugin < Plugin
       g.show_cards(player)
     when /^drop( |\z)/
       g.drop_player(player, a)
-    when /^(r|roles?)( |\z)/, 'od'
-      g.show_roles
+    when /^h(elp)?( |\z)/
+      g.show_help(player, a)
     when /^(pa|pass)( |\z)/
       g.processor(player, ['pass'])
     when /^(pi?|pl|di?|play)( |\z)/
@@ -1890,6 +1898,8 @@ class SanJuanPlugin < Plugin
       g.show_string
     when /^replace( |\z)/
       g.replace_player(player, a)
+    when /^(r|roles?)( |\z)/, 'od'
+      g.show_roles
     when /^transfer( |\z)/
       g.transfer_management(player, a)
     end
