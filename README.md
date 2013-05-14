@@ -11,6 +11,9 @@ Drop `sanjuan.rb` in your rbot's plugin folder and run `!rescan` to reload your 
 ##Gameplay
 http://www.riograndegames.com/uploads/Game/Game_170_gameRules.pdf
 
+##TODO
+Implement "event" cards from the Treasure Chest expansion.
+
 [Alea]: http://www.aleaspiele.de/
 [rbot]: http://ruby-rbot.org/
 [Rio Grande Games]: http://www.riograndegames.com/
