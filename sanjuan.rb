@@ -224,7 +224,6 @@ class SanJuan
       quantity: 3
     },
     # End-game cards:
-    # test this
     city_hall: {
       phase: :end,
       cost: 6,
@@ -233,7 +232,6 @@ class SanJuan
             'for each of his violet buildings',
       quantity: 2
     },
-    # test this
     guild_hall: {
       phase: :end,
       cost: 6,
@@ -339,7 +337,6 @@ class SanJuan
       text: 'owner draws 1 card from supply, keeping it if no one has built one',
       quantity: 3
     },
-    # test this
     residence: {
       expansion: true,
       phase: :end,
@@ -1344,7 +1341,7 @@ class SanJuan
       end
       if p.has?(:residence)
         values = { 1 => 0, 2 => 0, 3 => 0, 4 => 0 }
-        buildings.each do |b|
+        p.buildings.each do |b|
           values[b.card.vps] += 1 if b.card.vps.between?(1,4)
         end
         values.each_key do |k|
