@@ -285,7 +285,6 @@ class SanJuan
             'note: owner does no need to build for it to take affect',
       quantity: 3
     },
-    # test this
     customs_office: {
       expansion: true,
       phase: :councillor,
@@ -545,14 +544,8 @@ class SanJuan
     def goods
       # Returns array of occupied productions in
       # order from least to greatest value goods.
-      g_array = []
-      Roles.each do |e|
-        n = 0
-        buildings.each do |b|
-          g_array << n if b.goods and b.id == e
-          n += 0
-        end
-      end
+      g_array, n = [], 0
+      buildings.each { |b| g_array << n if b.goods; n += 0 }
       return g_array
     end
 
@@ -560,10 +553,6 @@ class SanJuan
       return false unless id
       buildings.each { |b| return true if b.id == id }
       return false
-    end
-
-    def occupied_productions
-      buildings.count { |b| b.goods }
     end
 
     def open_productions
@@ -581,7 +570,7 @@ class SanJuan
 
   end
 
-  attr_reader :channel, :deck, :governor, :join_timer, :manager,
+  attr_reader :cathedral, :channel, :deck, :governor, :join_timer, :manager,
               :market, :players, :phase, :roles, :started, :string
 
   def initialize(plugin, channel, user)
@@ -589,6 +578,7 @@ class SanJuan
     @channel = channel
     @plugin = plugin
     @registry = plugin.registry
+    @cathedral = @bot.config['sanjuan.expansion']
     @deck = []        # card stock
     @discard = []     # used cards
     @join_timer = nil # timer for countdown
@@ -631,7 +621,6 @@ class SanJuan
     card = Card.new(id) if card.nil?
     player.buildings << Building.new(card)
     #9.times { player.buildings << Building.new(@deck.pop) }
-    #player.buildings << Building.new(Card.new(:customs_office))
     deal(player, Starting_Cards)
     # Start game if there are enough players:
     if @join_timer
@@ -648,6 +637,7 @@ class SanJuan
     Cards.each_pair do |key, value|
       next if value[:phase] == :event and not @bot.config['sanjuan.events']
       next if value[:expansion] and not @bot.config['sanjuan.expansion']
+      next if key == :cathedral
       # Add an extra production card of each kind if using the expansion deck.
       x = (@bot.config['sanjuan.expansion'] and value[:phase] == :production)
       x = if x then 1 else 0 end
@@ -681,15 +671,6 @@ class SanJuan
     else
       @string = p_string + '.'
       show_string
-    end
-  end
-
-  def deal_builder(player)
-    if player.cards.empty?
-      say "#{player} can't build anything."
-      player.moved = true
-    else
-      @string << ", #{player}"
     end
   end
 
@@ -734,6 +715,14 @@ class SanJuan
       end
       show_councillor_cards(player)
       @string << ", #{player}"
+    end
+    if player.has?(:customs_office)
+      n = 0
+      n += 1 until player.buildings[n].id == :customs_office
+      unless player.buildings[n].goods
+        player.buildings[n].goods = draw
+        say "#{player} puts a card on the customs office."
+      end
     end
   end
 
@@ -932,6 +921,15 @@ class SanJuan
         a.delete_at(0)
       end
       cards = []
+      if a.first == 'cathedral'
+        if cathedral
+          cards << Card.new(:cathedral)
+        else
+          notify player, 'The Cathedral is not available to be built.'
+          return false
+        end
+        a.delete_at(0)
+      end
       a.each do |e|
         if e < 0 or player.cards[e].nil?
           notify player, 'Specify cards from your hand.'
@@ -939,16 +937,16 @@ class SanJuan
         end
         cards << player.cards[e].dup
       end
-      if player.has?(player.cards[a[0]].id) and player.cards[a[0]].violet?
+      if player.has?(cards.first.id) and cards.first.violet?
         notify player, 'You may only have one of each type of violet building.'
         return false
       end
-      cost += player.cards[a.first].cost
+      cost += cards.first.cost
       cost -= 1 if player.has?(:smithy) and player.cards[a.first].production?
       cost -= 1 if player.has?(:quarry) and player.cards[a.first].violet?
       cost = 0 if cost < 0
-      deficit = cost - (a.length - 1)
-      open_market = deficit <= player.occupied_productions
+      deficit = cost - (cards.size - 1)
+      open_market = deficit <= player.goods.size
       if player.has?(:black_market) and open_market and deficit.between?(1,2)
         player.goods[0..deficit-1].each do |e|
           @discard << player.buildings[e].goods
@@ -964,7 +962,12 @@ class SanJuan
       if crane
         say "#{player} builds over #{player.buildings[crane].card} " +
             "using the crane."
-        @discard << player.buildings[crane].card
+        # Cathedral never goes in the deck.
+        if player.buildings[crane].card.id == :cathedral
+          @cathedral = true
+        else
+          @discard << player.buildings[crane].card
+        end
         player.buildings[crane].card = cards.first
         # Move any goods to discard, but not stashes.
         if player.buildings[crane].goods
@@ -978,6 +981,7 @@ class SanJuan
       say "#{player} builds #{cards.first}."
       player.delete_cards(cards[0..cost])
       @discard |= cards[1..cost]
+      @cathedral = false if cards.first.id == :cathedral
       bonus_string = ''
       if player.has?(:carpenter) and cards.first.violet?
         unless player.built == :carpenter
@@ -1151,6 +1155,7 @@ class SanJuan
     case phase
     when :builder
       @string << 'Pick a card to build, or pass'
+      @string << '. Cathedral is available' if cathedral
       show_cards
     when :councillor
       @string << 'Pick which cards to keep'
@@ -1198,18 +1203,22 @@ class SanJuan
       return false
     end
     a.each do |e|
-      if player.buildings[e].nil? or player.buildings[e].violet?
-        notify player, 'Specify one of your production buildings.'
+      if player.buildings[e].nil?
+        notify player, 'Specify one of your buildings.'
         return false
       elsif not player.buildings[e].goods
-        notify player, 'Specify a production building that has goods.'
+        notify player, 'Specify a building that has goods.'
         return false
       end
     end
     n = 0
     a.each do |e|
       @discard << player.buildings[e].goods
-      n += market.first[player.buildings[e].id]
+      if player.buildings[e].id == :customs_office
+        n += 2
+      else
+        n += market.first[player.buildings[e].id]
+      end
       player.buildings[e].goods = nil
     end
     deal(player, n)
@@ -1480,7 +1489,7 @@ class SanJuan
       n += 1 if player.has?(:library)
     when :trader
       # Number of tradable goods.
-      p = player.occupied_productions
+      p = player.goods.size
       return n if p < 1
       n = if player.role == :trader then 2 else 1 end
       n += 2 if player.has?(:trading_post)
@@ -1522,11 +1531,11 @@ class SanJuan
 
   def processor(player, a)
     return if player.moved or a.length.zero?
-    return unless a.first =~ /^(b?[0-9]+|pass)$/
-    return if a.first =~ /^b/ and phase != :builder
+    return unless a.first =~ /^(b?[0-9]+|cathedral|pass)$/
+    return if a.first =~ /^(b|c)/ and phase != :builder
     player.moved = true
     old_phase = phase
-    a.map! { |e| e =~ /^(b|pass)/ ? e : e.to_i - 1 }
+    a.map! { |e| e =~ /^(b|cathedral|pass)/ ? e : e.to_i - 1 }
     player.moved = self.send("do_#{phase}", player, a)
     if done?
       # End-phase automations:
