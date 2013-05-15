@@ -256,7 +256,6 @@ class SanJuan
       quantity: 2
     },
     # Expansion Cards:
-    # test this
     office_building: {
       expansion: true,
       phase: :governor,
@@ -631,7 +630,8 @@ class SanJuan
     end
     card = Card.new(id) if card.nil?
     player.buildings << Building.new(card)
-    #10.times { player.buildings << Building.new(@deck.pop) }
+    #9.times { player.buildings << Building.new(@deck.pop) }
+    #player.buildings << Building.new(Card.new(:customs_office))
     deal(player, Starting_Cards)
     # Start game if there are enough players:
     if @join_timer
@@ -670,7 +670,7 @@ class SanJuan
     @phase = :bank
     p_string = 'Place cards under your bank or pass'
     players.each do |p|
-      if p.has?(:bank) and not p.banked
+      if p.has?(:bank) and p.cards.size > 0 and not p.banked
         p_string << ", #{p}"
         show_cards(p)
         p.moved = false
@@ -702,7 +702,7 @@ class SanJuan
     say "#{governor} is now governor."
     p_string = 'Place a card under your chapel or pass'
     players.each do |p|
-      if p.has?(:chapel)
+      if p.has?(:chapel) and p.cards.size > 0
         p_string << ", #{p}"
         show_cards(p)
         p.moved = false
@@ -759,6 +759,25 @@ class SanJuan
       do_turn
     else
       @string = p_string + '.'
+    end
+  end
+
+  def deal_office
+    @phase = :office
+    p_string = 'Discard and draw 1 or 2 new cards ' +
+               'with the office building, or pass'
+    players.each do |p|
+      if p.has?(:office_building) and p.cards.size > 0
+        p_string << ", #{p}"
+        show_cards(p)
+        p.moved = false
+      end
+    end
+    if done?
+      do_turn
+    else
+      @string = p_string + '.'
+      show_string
     end
   end
 
@@ -1065,6 +1084,30 @@ class SanJuan
     return true
   end
 
+  def do_office(player, a)
+    if a.first == 'pass'
+      say "#{player} passes."
+    else
+      unless a.size.between?(1, 2)
+        notify player, 'Specify only 1 or 2 cards.'
+        return false
+      end
+      cards = []
+      a.each do |e|
+        if player.cards[e].nil?
+          notify player, 'Specify cards from your hand.'
+          return false
+        end
+        cards << player.cards[e]
+      end
+      @discard |= cards
+      player.delete_cards(cards)
+      say "#{player} discards and draws #{cards.size} new card#{s(cards.size)}."
+      deal(player, cards.size)
+    end
+    return true
+  end
+
   def do_producer(player, a)
     n = inventory(player)
     unless a.length == n or a.first == 'pass'
@@ -1239,7 +1282,7 @@ class SanJuan
       end
     elsif players[1].role
       @players << @players.shift
-      deal_chapel
+      deal_office
       return
     end
     case phase
@@ -1251,6 +1294,9 @@ class SanJuan
       return
     when :governor
       players.first.moved = false
+    when :office
+      deal_chapel
+      return
     else
       @players << @players.shift
       players.first.role = nil if players.length == 2
@@ -1624,7 +1670,7 @@ class SanJuan
     m_string = 'Market prices: '
     market.first.each_key do |key|
       m_string << B + Colors[key] + key.to_s.gsub('_',' ').capitalize +
-                  ':' + market.first[key] + NormalText
+                  ':' + market.first[key].to_s + NormalText
     end
     say m_string
   end
@@ -1658,7 +1704,7 @@ class SanJuan
       # player must discard p.discard during the governor phase
       @players = [ @players.pop ] + players
     end
-    deal_chapel
+    deal_office
   end
 
   def stringify(array, b=false)
@@ -1825,9 +1871,9 @@ class SanJuanPlugin < Plugin
       'Special buildings like chapel or bank are marked with a | for ' +
       'every card they are storing.'
     when /command/
-      'h/help <card #> for information on a specific card -- ' +
       'play/pick cards: p <card #> -- build: p <card #> <discard #> -- ' +
       'produce/trade: p <building #> -- pass -- pa (when applicable) ' +
+      'show for information on a specific card: h/help <card #> -- ' +
       'show roles: r -- show turn: t -- replace: replace [with] <user> ' +
       "(gives your spot in game to another user) -- #{p}help #{plugin} " +
       'manager for manager-specific commands'
