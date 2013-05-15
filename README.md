@@ -12,6 +12,7 @@ Drop `sanjuan.rb` in your rbot's plugin folder and run `!rescan` to reload your 
 http://www.riograndegames.com/uploads/Game/Game_170_gameRules.pdf
 
 ##TODO
+Implement "Cathedral" card from the Treasure Chest expansion.
 Implement "event" cards from the Treasure Chest expansion.
 
 [Alea]: http://www.aleaspiele.de/
