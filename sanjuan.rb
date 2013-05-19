@@ -2,7 +2,7 @@
 # Author:: Jay Thomas <degradinglight@gmail.com>
 # Copyright:: (C) 2013 gfax
 # License:: GPL
-# Version:: 2013-05-13
+# Version:: 2013-05-19
 #
 
 class SanJuan
@@ -525,7 +525,7 @@ class SanJuan
       @max_cards = 7  # dynamic hand card size limit
       @moved = true   # false until played or passed
       @role = nil     # resets during governor phase
-      @time= Time.now # time player joined game
+      @time = nil     # time player joined game
       @tmp_cards = [] # used for councillor, goldmine, etc.
     end
 
@@ -633,7 +633,7 @@ class SanJuan
   end
 
   def create_deck
-    # Extract help information from card hashes.
+    # Extract information from card hashes.
     Cards.each_pair do |key, value|
       next if value[:phase] == :event and not @bot.config['sanjuan.events']
       next if value[:expansion] and not @bot.config['sanjuan.expansion']
@@ -1154,8 +1154,8 @@ class SanJuan
     players.each { |p| p.moved = false }
     case phase
     when :builder
-      @string << 'Pick a card to build, or pass'
-      @string << '. Cathedral is available' if cathedral
+      @string << 'Pick a card to build, or pass.'
+      @string << ' Cathedral is available' if cathedral
       show_cards
     when :councillor
       @string << 'Pick which cards to keep'
@@ -1430,7 +1430,7 @@ class SanJuan
         stats[k][:ties] = 1
         p_array << k.to_s
       end
-      p_string << "#{p_array.join(' and ')}!"
+      p_string << Utils.comma_list(p_array) + '!'
     else
       scores.each_key { |k| p_string = "#{k} wins!" }
     end
@@ -1441,7 +1441,7 @@ class SanJuan
     @plugin.remove_game(channel)
   end
 
-  def get_player(user, source=nil)
+  def get_player(user, source='')
     case user
     when NilClass
       return nil
@@ -1455,7 +1455,7 @@ class SanJuan
       end
       players.each do |p|
         if p.user.irc_downcase =~ /^#{user.irc_downcase(channel.casemap)}/
-          return p unless p.user.irc_downcase == source
+          return p unless p.user.irc_downcase == source.downcase
         end
       end
     else
@@ -1500,7 +1500,7 @@ class SanJuan
   end
 
   def market_shift
-    if market.empty?
+    if market.size == 1
       @market = [
         { indigo_plant: 1, sugar_mill: 1, tobacco_storage: 1,
           coffee_roaster: 2, silver_smelter: 2 },
@@ -1530,7 +1530,7 @@ class SanJuan
   end
 
   def processor(player, a)
-    return if player.moved or a.length.zero?
+    return if player.moved or a.empty?
     return unless a.first =~ /^(b?[0-9]+|cathedral|pass)$/
     return if a.first =~ /^(b|c)/ and phase != :builder
     player.moved = true
@@ -1713,6 +1713,7 @@ class SanJuan
       # player must discard p.discard during the governor phase
       @players = [ @players.pop ] + players
     end
+    players.each { |p| p.time = started }
     deal_office
   end
 
@@ -1735,12 +1736,9 @@ class SanJuan
                      "#{manager} manages this game."
       return
     end
-    [ 'game', 'manager', 'management', 'ownership', 'to' ].each do |w|
-      a.delete_at(0) if a.first == w
-    end
-    new_manager = get_player(a.first, manager.user.downcase)
+    a.each { |e| break if new_manager = get_player(e, manager.user) }
     if new_manager.nil?
-      say "'#{a.first}' is not playing #{Title}"
+      say "#{player}: Specify another player."
       return
     elsif manager == new_manager
       say "#{player.user}: You are already game manager."
@@ -1873,7 +1871,7 @@ class SanJuanPlugin < Plugin
       "Cards names are followed by their #{SanJuan::Colors[:cost]}cost " +
       "#{NormalText}and victory points. The special functions of each " +
       "card can be found by typing #{p}help #{plugin} <card>; See the " +
-      "manual for any other card-realated questions."
+      "manual for any other card-related questions."
     when /building/
       'Building names are followed by their worth in victory points. ' +
       'Production buildings are marked * when they have produced goods. ' +
@@ -1891,13 +1889,15 @@ class SanJuanPlugin < Plugin
       'Game managers may stop the game at any time, or transfer ownership ' +
       "by typing 'transfer [game to] <player>'. Managers may replace " +
       'themselves as well as other players in the game by typing ' +
-      "'replace <user> [with] <nick>'"
+      "'replace [me with] <user> / replace <player> [with] <nick>'"
     when /rule/, /manual/
       "http://www.riograndegames.com/uploads/Game/Game_170_gameRules.pdf"
     when /stat/, /scor/
       "#{p}#{plugin} stats <channel|user> -- displays the stats and scores " +
       "for a channel or user. If no channel or user is specified, this " +
-      "command will show you your own stats."
+      "command will show you your own stats.\n#{p}#{plugin} stats <channel> " +
+      "<user> -- displays user stats for a specific channel\n#{p}#{plugin} " +
+      "top <num> <channel> -- shows the top <num> scores for a given channel"
     when /cancel/, /end/, /halt/, /stop/
       "#{p}#{plugin} stop -- Stops the current game; Only game " +
       'managers and bot owners can stop a game in progress.'
