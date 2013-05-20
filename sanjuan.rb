@@ -1500,7 +1500,7 @@ class SanJuan
   end
 
   def market_shift
-    if market.size == 1
+    if market.size < 2
       @market = [
         { indigo_plant: 1, sugar_mill: 1, tobacco_storage: 1,
           coffee_roaster: 2, silver_smelter: 2 },
